@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from civic_data_health.storage import init_db
+from civic_data_health.storage import cached_view_metadata, init_db, upsert_view_metadata
 
 
 class StorageMigrationTests(unittest.TestCase):
@@ -49,6 +49,17 @@ class StorageMigrationTests(unittest.TestCase):
             self.assertIn("data_dictionary_quality_json", health_columns)
             self.assertIn("classification_json", health_columns)
             migrated.close()
+
+    def test_view_metadata_cache_round_trip(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = Path(tmp) / "civic.sqlite"
+            init_db(db_path)
+            conn = sqlite3.connect(str(db_path))
+            conn.row_factory = sqlite3.Row
+            raw = {"name": "Example", "columns": [{"fieldName": "issue_date"}]}
+            upsert_view_metadata(conn, dataset_id="abcd-1234", source_modified="2026-01-01", raw=raw)
+            self.assertEqual(cached_view_metadata(conn, "abcd-1234", "2026-01-01"), raw)
+            conn.close()
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -258,6 +259,60 @@ def insert_skipped(conn: sqlite3.Connection, run_id: int, skipped: Iterable[Skip
             )
             for record in skipped
         ],
+    )
+
+
+def cached_view_metadata(conn: sqlite3.Connection, dataset_id: str, source_modified: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    if source_modified is None:
+        row = conn.execute(
+            """
+            SELECT raw_json
+            FROM view_metadata_cache
+            WHERE dataset_id = ?
+            """,
+            (dataset_id,),
+        ).fetchone()
+    else:
+        row = conn.execute(
+            """
+            SELECT raw_json
+            FROM view_metadata_cache
+            WHERE dataset_id = ? AND COALESCE(source_modified, '') = COALESCE(?, '')
+            """,
+            (dataset_id, source_modified),
+        ).fetchone()
+    if row is None:
+        return None
+    return json.loads(row["raw_json"])
+
+
+def upsert_view_metadata(
+    conn: sqlite3.Connection,
+    *,
+    dataset_id: str,
+    source_modified: Optional[str],
+    raw: Dict[str, Any],
+    http_status: int = 200,
+) -> None:
+    conn.execute(
+        """
+        INSERT INTO view_metadata_cache (dataset_id, source_modified, fetched_at, columns_json, raw_json, http_status)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(dataset_id) DO UPDATE SET
+            source_modified = excluded.source_modified,
+            fetched_at = excluded.fetched_at,
+            columns_json = excluded.columns_json,
+            raw_json = excluded.raw_json,
+            http_status = excluded.http_status
+        """,
+        (
+            dataset_id,
+            source_modified,
+            datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+            json.dumps(raw.get("columns") or [], sort_keys=True),
+            json.dumps(raw, sort_keys=True),
+            http_status,
+        ),
     )
 
 

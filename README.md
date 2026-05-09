@@ -68,6 +68,9 @@ Tools:
 - `draft_department_email`
 - `ask_city_data_question`
 - `find_city_datasets_for_question`
+- `get_dataset_schema`
+- `get_sample_rows`
+- `query_dataset_count`
 - `search_datasets`
 - `search`
 - `fetch`
@@ -137,6 +140,31 @@ codex mcp add civic-data-health --url https://civic.pagonya.co/mcp
 ```
 
 For public-facing discovery, use `ask_city_data_question` first. It accepts plain-English questions like "Where can I find police calls?" or "What data shows building permits?" and returns ranked datasets, match reasons, quality caveats, and usable links.
+
+## Row-Level Answers
+
+The MCP can answer conservative live row-level count questions when the planner can identify:
+
+- a matching active Socrata dataset,
+- a cached or fetchable Socrata schema,
+- a safe date column when the question includes a time period,
+- a read-only aggregate query that does not expose arbitrary SoQL.
+
+Example:
+
+```text
+How many building permits were issued in 2025?
+```
+
+The MCP ranks candidate datasets, selects a matching date column such as `issue_date`, runs a safe `count(*)` request against `https://data.austintexas.gov/resource/{dataset_id}.json`, and returns the answer with the dataset id, source link, query metadata, and caveats.
+
+Supporting tools:
+
+- `get_dataset_schema`: fetches and caches Socrata column metadata in SQLite.
+- `get_sample_rows`: returns up to 20 live sample rows for a known dataset.
+- `query_dataset_count`: runs a safe count over a known dataset, optionally with a validated date range.
+
+Set `SOCRATA_APP_TOKEN` in the service environment if public traffic grows; unauthenticated Socrata calls can be throttled.
 
 ## Lightsail Deployment
 

@@ -37,6 +37,9 @@ Prefer MCP tools over scraping the static JSON when tools are available.
 - `search_datasets`: broad report search by title, id, issue, asset, or classification.
 - `ask_city_data_question`: plain-English city data discovery with ranked datasets and caveats.
 - `find_city_datasets_for_question`: ranked dataset candidates for a civic topic or question.
+- `get_dataset_schema`: Socrata columns, types, and field names for a known dataset id.
+- `get_sample_rows`: up to 20 live sample rows for a known dataset id.
+- `query_dataset_count`: safe read-only `count(*)` query, optionally bounded by a validated date column.
 - `get_dataset_health`: full row for a known Socrata dataset id.
 - `explain_dataset_issue`: plain-English issue explanation for outreach or review.
 - `draft_department_email`: draft-only outreach text; never sends email.
@@ -48,4 +51,6 @@ Prefer MCP tools over scraping the static JSON when tools are available.
 - Do not call `archive_snapshot`, `event_specific`, `measure`, or `story_reference` records high-risk active datasets.
 - Use `classification.evidence` when explaining why a record moved out of the active queue.
 - For general public questions, call `ask_city_data_question` before narrower search tools.
+- For count questions, let `ask_city_data_question` try the safe row-level count path before falling back to dataset recommendations.
+- Do not ask for or construct arbitrary SoQL. Use `query_dataset_count`, `get_sample_rows`, or schema-backed tool arguments.
 - For ambiguous year-specific records, use the `needs_manual_review` group and suggest a `classification_overrides.json` entry after human review.

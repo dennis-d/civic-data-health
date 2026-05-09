@@ -21,6 +21,8 @@ from .analysis import (
     top_actionable_fixes,
 )
 from .discovery import answer_city_data_question, find_city_datasets
+from .row_answer import answer_row_level_question, build_date_where, DateRange
+from .socrata import count_rows, get_dataset_schema as load_socrata_schema, get_sample_rows as load_socrata_sample_rows
 from .storage import connect, latest_run_id, report_rows, run_summary
 
 AssetGroupArg = Literal["active_dataset", "needs_manual_review", "archive_snapshot", "event_specific", "measure", "story_reference", "all"]
@@ -257,7 +259,11 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
             raise ValueError("question is required")
         with connect(db_path) as conn:
             run_id = require_latest_run_id(conn)
-            answer = answer_city_data_question(report_rows(conn, run_id), normalized_question, limit=clamp_limit(limit))
+            rows = report_rows(conn, run_id)
+            row_answer = answer_row_level_question(conn, rows, normalized_question)
+            if row_answer is not None:
+                return {"run_id": run_id, **row_answer}
+            answer = answer_city_data_question(rows, normalized_question, limit=clamp_limit(limit))
             return {"run_id": run_id, **answer}
 
     @mcp.tool(
@@ -278,6 +284,81 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
                 "question": normalized_question,
                 "datasets": [match.to_result() for match in matches],
             }
+
+    @mcp.tool(
+        title="Get Dataset Schema",
+        description="Use this when you need column names and types for a known Austin Socrata dataset id.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def get_dataset_schema(dataset_id: str) -> Dict[str, Any]:
+        normalized_id = dataset_id.strip().lower()
+        if not normalized_id:
+            raise ValueError("dataset_id is required")
+        with connect(db_path) as conn:
+            run_id = require_latest_run_id(conn)
+            row = find_dataset(report_rows(conn, run_id), normalized_id)
+            if row is None:
+                raise ValueError("Dataset id not found in latest run: %s" % normalized_id)
+            return {"run_id": run_id, "schema": load_socrata_schema(conn, normalized_id, row.get("modified"))}
+
+    @mcp.tool(
+        title="Get Sample Rows",
+        description="Use this when you need a small live sample from a known Austin Socrata dataset id.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def get_sample_rows(dataset_id: str, limit: int = 5) -> Dict[str, Any]:
+        normalized_id = dataset_id.strip().lower()
+        if not normalized_id:
+            raise ValueError("dataset_id is required")
+        safe_limit = max(1, min(int(limit or 5), 20))
+        with connect(db_path) as conn:
+            run_id = require_latest_run_id(conn)
+            row = find_dataset(report_rows(conn, run_id), normalized_id)
+            if row is None:
+                raise ValueError("Dataset id not found in latest run: %s" % normalized_id)
+            return {
+                "run_id": run_id,
+                "dataset": {"dataset_id": row["dataset_id"], "title": row["title"], "label": row["label"], "classification": row.get("classification") or {}},
+                "rows": load_socrata_sample_rows(normalized_id, safe_limit),
+            }
+
+    @mcp.tool(
+        title="Query Dataset Count",
+        description="Use this for a safe read-only count over one known Austin Socrata dataset, optionally bounded by a validated date column.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def query_dataset_count(dataset_id: str, date_column: str = "", start: str = "", end: str = "") -> Dict[str, Any]:
+        normalized_id = dataset_id.strip().lower()
+        if not normalized_id:
+            raise ValueError("dataset_id is required")
+        if bool(start.strip()) != bool(end.strip()):
+            raise ValueError("start and end must be supplied together")
+        with connect(db_path) as conn:
+            run_id = require_latest_run_id(conn)
+            row = find_dataset(report_rows(conn, run_id), normalized_id)
+            if row is None:
+                raise ValueError("Dataset id not found in latest run: %s" % normalized_id)
+            schema = load_socrata_schema(conn, normalized_id, row.get("modified"))
+        where = ""
+        if start.strip() and end.strip():
+            if not date_column.strip():
+                raise ValueError("date_column is required when start/end are supplied")
+            field_names = {column["field_name"] for column in schema["columns"]}
+            if date_column.strip() not in field_names:
+                raise ValueError("date_column is not present in schema: %s" % date_column)
+            where = build_date_where(date_column.strip(), DateRange("custom", start.strip(), end.strip())) or ""
+        count = count_rows(normalized_id, where or None)
+        return {
+            "run_id": run_id,
+            "dataset_id": normalized_id,
+            "title": row["title"],
+            "count": count,
+            "where": where,
+            "source": "https://data.austintexas.gov/resource/%s.json" % normalized_id,
+        }
 
     @mcp.tool(
         name="search",

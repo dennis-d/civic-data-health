@@ -1,6 +1,6 @@
 {
   "name": "civic-data-health",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Codex workflow and MCP endpoint for the Civic Data Health Austin open data audit.",
   "author": {
     "name": "Dennis D",
