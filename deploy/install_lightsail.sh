@@ -23,7 +23,7 @@ else
   sudo git clone "$REPO_URL" "$APP_DIR"
 fi
 
-sudo /usr/local/bin/uv venv --python 3.12 "$APP_DIR/.venv"
+sudo /usr/local/bin/uv venv --clear --python 3.12 "$APP_DIR/.venv"
 sudo "$APP_DIR/.venv/bin/pip" install --upgrade pip
 sudo "$APP_DIR/.venv/bin/pip" install "$APP_DIR"
 sudo rm -rf "$APP_DIR/build"
