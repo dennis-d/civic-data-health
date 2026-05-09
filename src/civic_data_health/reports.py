@@ -7,9 +7,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from .analysis import asset_group, asset_group_label, summarize_asset_groups, top_actionable_fixes
 from .storage import connect, latest_run_id, report_rows, run_summary, skipped_rows
 
 FOOTER = "Independent analysis using public City of Austin open data. Not affiliated with or endorsed by the City of Austin."
+SECTION_ORDER = ("active_dataset", "measure", "story_reference")
 
 
 def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[int] = None) -> Dict[str, str]:
@@ -33,6 +35,7 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
     payload = {
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "summary": summary,
+        "asset_groups": summarize_asset_groups(rows),
         "skipped_records": skipped,
         "datasets": rows,
     }
@@ -94,7 +97,8 @@ def write_csv(path: Path, rows) -> None:
 
 
 def render_html(summary: Dict[str, Any], rows, skipped) -> str:
-    top_rows = rows[:100]
+    group_summary = summarize_asset_groups(rows)
+    actionable = top_actionable_fixes(rows, limit=25, group="active_dataset")
     skipped_markup = "".join(
         "<li>#{idx}: {title} ({identifier}) - {reason}</li>".format(
             idx=record["source_index"],
@@ -107,7 +111,11 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
     if not skipped_markup:
         skipped_markup = "<li>No skipped records in this run.</li>"
 
-    row_markup = "\n".join(render_dataset_row(row) for row in top_rows)
+    section_markup = "\n".join(render_asset_section(group, rows, group_summary[group]) for group in SECTION_ORDER)
+    group_markup = "\n".join(render_group_metric(group_summary[group]) for group in SECTION_ORDER)
+    actionable_markup = "\n".join(render_actionable_row(item) for item in actionable)
+    if not actionable_markup:
+        actionable_markup = '<tr><td colspan="6">No active dataset fixes are currently ranked above the review threshold.</td></tr>'
     return """<!doctype html>
 <html lang="en">
 <head>
@@ -123,9 +131,12 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
     h2 {{ margin:28px 0 12px; font-size:24px; }}
     p {{ line-height:1.5; }}
     .summary {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin-top:20px; }}
+    .group-summary {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; margin:18px 0; }}
     .metric {{ background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px; }}
     .metric strong {{ display:block; font-size:28px; }}
     .metric span {{ color:var(--muted); font-size:14px; }}
+    .tabs {{ display:flex; flex-wrap:wrap; gap:10px; margin:22px 0 0; }}
+    .tabs a {{ border:1px solid #bfd0d9; border-radius:6px; padding:9px 12px; background:#fff; color:var(--accent); text-decoration:none; font-family: ui-sans-serif, system-ui, sans-serif; font-weight:700; }}
     .actions {{ display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }}
     .actions a {{ color:#fff; background:var(--accent); text-decoration:none; border-radius:6px; padding:9px 12px; font-family: ui-sans-serif, system-ui, sans-serif; }}
     table {{ width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); }}
@@ -138,6 +149,7 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
     .high_risk {{ color:var(--risk); }}
     .needs_review {{ color:var(--warn); }}
     .good {{ color:var(--good); }}
+    .section-note {{ color:var(--muted); margin-top:-4px; }}
     footer {{ color:var(--muted); border-top:1px solid var(--line); padding-top:18px; margin-top:28px; }}
     @media (max-width:760px) {{ table, thead, tbody, th, td, tr {{ display:block; }} thead {{ display:none; }} tr {{ border-bottom:1px solid var(--line); padding:10px; }} td {{ border:0; padding:5px 0; }} td::before {{ content:attr(data-label) ": "; font-weight:700; }} }}
   </style>
@@ -159,16 +171,29 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
         <a href="austin_dataset_health.csv">Download CSV</a>
         <a href="austin_dataset_health.json">Download JSON</a>
       </div>
+      <nav class="tabs" aria-label="Report sections">
+        <a href="#active_dataset">Active datasets</a>
+        <a href="#measure">Measures and indicators</a>
+        <a href="#story_reference">Stories and reference</a>
+        <a href="#actionable">Top fix opportunities</a>
+      </nav>
     </main>
   </header>
   <main>
-    <h2>Top Findings</h2>
+    <h2>Catalog Sections</h2>
+    <p class="section-note">Active datasets are ranked separately from Socrata measures, story pages, and reference assets so one-time events and indicators do not distort the operational risk queue.</p>
+    <div class="group-summary">
+      {group_metrics}
+    </div>
+    <h2 id="actionable">Top Active Dataset Fix Opportunities</h2>
+    <p class="section-note">Ranked by metadata impact, label severity, and ease of remediation. This is the practical cleanup queue for a city data steward.</p>
     <table>
-      <thead><tr><th>Dataset</th><th>Score</th><th>Label</th><th>Asset</th><th>Modified</th><th>Owner</th><th>Issues</th><th>Remediation</th></tr></thead>
+      <thead><tr><th>Dataset</th><th>Priority</th><th>Score</th><th>Label</th><th>Owner</th><th>Actions</th></tr></thead>
       <tbody>
-        {rows}
+        {actionable_rows}
       </tbody>
     </table>
+    {sections}
     <h2>Skipped Records</h2>
     <p>Skipped {skipped_count} records due to normalization errors. Showing up to 20.</p>
     <ul>{skipped_markup}</ul>
@@ -184,12 +209,75 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
         good=summary["labels"]["good"],
         skipped=summary["skipped_records"],
         average=summary["average_score"],
-        rows=row_markup,
+        group_metrics=group_markup,
+        actionable_rows=actionable_markup,
+        sections=section_markup,
         skipped_count=summary["skipped_records"],
         skipped_markup=skipped_markup,
         footer=escape(FOOTER),
         run_id=summary["run_id"],
         fetched_at=escape(summary["fetched_at"]),
+    )
+
+
+def render_group_metric(summary: Dict[str, Any]) -> str:
+    return """<div class="metric">
+  <strong>{count}</strong>
+  <span>{label}</span>
+  <p class="section-note">Needs review: {needs_review} | Good: {good} | High risk: {high_risk}</p>
+</div>""".format(
+        count=summary["count"],
+        label=escape(summary["label"]),
+        needs_review=summary["labels"]["needs_review"],
+        good=summary["labels"]["good"],
+        high_risk=summary["labels"]["high_risk"],
+    )
+
+
+def render_asset_section(group: str, rows, summary: Dict[str, Any]) -> str:
+    group_rows = [row for row in rows if asset_group(row) == group][:75]
+    body = "\n".join(render_dataset_row(row) for row in group_rows)
+    if not body:
+        body = '<tr><td colspan="8">No records in this section.</td></tr>'
+    top_issues = ", ".join("%s (%s)" % (issue["title"], issue["count"]) for issue in summary["top_issues"][:4]) or "No recurring issues"
+    return """<section id="{group}">
+  <h2>{label}</h2>
+  <p class="section-note">{count} records. Showing top {shown} by label, score, and title. Frequent issues: {issues}.</p>
+  <table>
+    <thead><tr><th>Dataset</th><th>Score</th><th>Label</th><th>Asset</th><th>Modified</th><th>Owner</th><th>Issues</th><th>Remediation</th></tr></thead>
+    <tbody>
+      {rows}
+    </tbody>
+  </table>
+</section>""".format(
+        group=escape(group),
+        label=escape(asset_group_label(group)),
+        count=summary["count"],
+        shown=len(group_rows),
+        issues=escape(top_issues),
+        rows=body,
+    )
+
+
+def render_actionable_row(item: Dict[str, Any]) -> str:
+    title = escape(item["title"] or item["dataset_id"])
+    detail_href = "datasets/%s.html" % escape(item["dataset_id"])
+    title = '<a href="{url}">{title}</a>'.format(url=detail_href, title=title)
+    return """<tr>
+  <td data-label="Dataset" class="title">{title}<div class="issues">{dataset_id}</div></td>
+  <td data-label="Priority">{priority}</td>
+  <td data-label="Score">{score}</td>
+  <td data-label="Label" class="label {label}">{label}</td>
+  <td data-label="Owner">{owner}</td>
+  <td data-label="Actions">{actions}</td>
+</tr>""".format(
+        title=title,
+        dataset_id=escape(item["dataset_id"]),
+        priority=item["priority"],
+        score=item["score"],
+        label=escape(item["label"]),
+        owner=escape(item["owner"]),
+        actions=escape(" ".join(item["recommended_actions"])),
     )
 
 

@@ -49,6 +49,7 @@ List tools:
 ```bash
 curl -sS -X POST http://127.0.0.1:8787/mcp \
   -H 'content-type: application/json' \
+  -H 'accept: application/json, text/event-stream' \
   --data '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
@@ -56,8 +57,15 @@ Tools:
 
 - `get_report_summary`
 - `list_high_risk_datasets`
+- `get_top_actionable_fixes`
+- `compare_asset_types`
+- `list_datasets_by_asset_group`
 - `get_dataset_health`
+- `explain_dataset_issue`
+- `draft_department_email`
 - `search_datasets`
+- `search`
+- `fetch`
 
 ## Scoring
 
@@ -70,10 +78,12 @@ Every dataset starts at `100`.
 - `-15` for missing publisher/contact metadata.
 - `-10` when license, category, or tags are missing.
 
-Hard high-risk overrides:
+Hard high-risk overrides for active datasets:
 
 - No distribution.
 - No distribution with `downloadURL` or `accessURL`.
+
+Socrata stories, measures, reference assets, and detected point-in-time/event records stay visible in the report, but they are grouped separately from active dataset risk so archival or indicator pages do not distort the high-risk queue.
 
 Column metadata is intentionally outside the global score so enriched and unenriched datasets stay comparable.
 
@@ -99,4 +109,3 @@ Public endpoints:
 - `https://civic.pagonya.co/mcp`
 
 The refresh timer runs daily and skips expensive reprocessing when the catalog SHA has not changed.
-
