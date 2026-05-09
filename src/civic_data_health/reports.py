@@ -78,6 +78,7 @@ def write_csv(path: Path, rows) -> None:
         "contact",
         "license",
         "category",
+        "tags",
         "landing_url",
         "machine_url",
         "asset_type",
@@ -103,6 +104,7 @@ def write_csv(path: Path, rows) -> None:
                     "contact": row["contact"],
                     "license": row["license"],
                     "category": row["category"],
+                    "tags": ";".join(row.get("keywords") or []),
                     "landing_url": row["landing_url"],
                     "machine_url": row["machine_url"],
                     "asset_type": row.get("asset_type") or "",
@@ -353,6 +355,7 @@ def render_detail_page(summary: Dict[str, Any], row: Dict[str, Any]) -> str:
     classification_evidence = ", ".join(classification.get("evidence") or []) or "No stored evidence"
     landing = row.get("landing_url") or ""
     machine = row.get("machine_url") or ""
+    tags = format_tags(row)
     return """<!doctype html>
 <html lang="en">
 <head>
@@ -400,6 +403,7 @@ def render_detail_page(summary: Dict[str, Any], row: Dict[str, Any]) -> str:
       <p><strong>Owner:</strong> {owner}</p>
       <p><strong>Contact:</strong> {contact}</p>
       <p><strong>Category:</strong> {category}</p>
+      <p><strong>Tags:</strong> {tags}</p>
       <p><strong>License:</strong> {license}</p>
       <p><strong>Landing page:</strong> {landing}</p>
       <p><strong>Machine URL:</strong> {machine}</p>
@@ -423,13 +427,31 @@ def render_detail_page(summary: Dict[str, Any], row: Dict[str, Any]) -> str:
         classification_reason=escape(classification.get("reason") or ""),
         owner=escape(row.get("publisher") or "Missing"),
         contact=escape(row.get("contact") or "Missing"),
-        category=escape(row.get("category") or "Missing"),
+        category=format_category(row),
+        tags=tags,
         license=escape(row.get("license") or "Missing"),
         landing=('<a href="%s">%s</a>' % (escape(landing), escape(landing))) if landing else "Missing",
         machine=('<a href="%s">%s</a>' % (escape(machine), escape(machine))) if machine else "Missing",
         run_id=summary["run_id"],
         fetched_at=escape(summary["fetched_at"]),
     )
+
+
+def format_category(row: Dict[str, Any]) -> str:
+    category = row.get("category") or ""
+    if category:
+        return escape(category)
+    keywords = row.get("keywords") or []
+    if keywords:
+        return "Missing (tags available: %s)" % format_tags(row)
+    return "Missing"
+
+
+def format_tags(row: Dict[str, Any]) -> str:
+    keywords = row.get("keywords") or []
+    if not keywords:
+        return "Missing"
+    return escape(", ".join(str(keyword) for keyword in keywords))
 
 
 def render_methodology_page(summary: Dict[str, Any]) -> str:

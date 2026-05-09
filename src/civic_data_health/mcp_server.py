@@ -468,6 +468,8 @@ def dataset_text(row: Dict[str, Any]) -> str:
         "modified": row.get("modified") or "",
         "publisher": row.get("publisher") or "",
         "contact": row.get("contact") or "",
+        "keywords": row.get("keywords") or [],
+        "category": row.get("category") or "",
         "issue_codes": row["issue_codes"],
         "remediation": row["remediation"],
         "landing_url": dataset_url(row),

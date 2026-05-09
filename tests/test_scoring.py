@@ -50,6 +50,13 @@ class ScoringTests(unittest.TestCase):
         self.assertIn("no_distribution", result.issue_codes)
         self.assertEqual(result.label, "high_risk")
 
+    def test_metadata_remediation_only_names_missing_fields(self):
+        result = score_dataset(dataset(license="", category="", keywords=["map", "county"]), now=datetime(2026, 5, 9, tzinfo=timezone.utc))
+        self.assertIn("license_missing", result.issue_codes)
+        self.assertIn("category_missing", result.issue_codes)
+        self.assertNotIn("tags_missing", result.issue_codes)
+        self.assertIn("Add missing metadata: license and category.", result.remediation)
+
     def test_event_specific_record_is_not_forced_high_risk(self):
         result = score_dataset(
             dataset(

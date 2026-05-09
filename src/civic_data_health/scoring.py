@@ -104,7 +104,7 @@ def score_dataset(
         issues.append("tags_missing")
     if metadata_missing:
         score -= 10
-        remediation.append("Add license, category, and keyword metadata.")
+        remediation.append(metadata_remediation(dataset))
 
     hard_override = False
     if not dataset.distribution:
@@ -195,6 +195,27 @@ def description_issue_code(title: str, description: str) -> Optional[str]:
     if len(cleaned) < 80:
         return "description_too_short"
     return None
+
+
+def metadata_remediation(dataset: NormalizedDataset) -> str:
+    missing = []
+    if not dataset.license:
+        missing.append("license")
+    if not dataset.category:
+        missing.append("category")
+    if not dataset.keywords:
+        missing.append("tags")
+    return "Add missing metadata: %s." % human_join(missing)
+
+
+def human_join(values):
+    if not values:
+        return "none"
+    if len(values) == 1:
+        return values[0]
+    if len(values) == 2:
+        return "%s and %s" % (values[0], values[1])
+    return "%s, and %s" % (", ".join(values[:-1]), values[-1])
 
 
 def dedupe(values):
