@@ -32,6 +32,6 @@ sudo cp "$APP_DIR/deploy/civic-health-refresh.timer" /etc/systemd/system/civic-h
 sudo systemctl daemon-reload
 sudo systemctl enable --now civic-health-refresh.timer
 sudo systemctl restart civic-health-refresh.service
-sudo systemctl enable --now civic-health.service
+sudo systemctl enable civic-health.service
+sudo systemctl restart civic-health.service
 sudo systemctl reload nginx
-
