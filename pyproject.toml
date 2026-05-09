@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "civic-data-health"
-version = "0.2.0"
+version = "0.3.0"
 description = "Deterministic Austin open data health reports and read-only MCP tools."
 readme = "README.md"
 requires-python = ">=3.10"

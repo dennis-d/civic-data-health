@@ -35,6 +35,8 @@ Prefer MCP tools over scraping the static JSON when tools are available.
 - `list_classification_review_candidates`: dated records that need human classification review.
 - `get_classification_methodology`: groups, evidence codes, and hard override rules.
 - `search_datasets`: broad report search by title, id, issue, asset, or classification.
+- `ask_city_data_question`: plain-English city data discovery with ranked datasets and caveats.
+- `find_city_datasets_for_question`: ranked dataset candidates for a civic topic or question.
 - `get_dataset_health`: full row for a known Socrata dataset id.
 - `explain_dataset_issue`: plain-English issue explanation for outreach or review.
 - `draft_department_email`: draft-only outreach text; never sends email.
@@ -45,4 +47,5 @@ Prefer MCP tools over scraping the static JSON when tools are available.
 - Treat `active_dataset` as the operational cleanup queue.
 - Do not call `archive_snapshot`, `event_specific`, `measure`, or `story_reference` records high-risk active datasets.
 - Use `classification.evidence` when explaining why a record moved out of the active queue.
+- For general public questions, call `ask_city_data_question` before narrower search tools.
 - For ambiguous year-specific records, use the `needs_manual_review` group and suggest a `classification_overrides.json` entry after human review.

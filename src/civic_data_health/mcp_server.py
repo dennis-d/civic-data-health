@@ -20,6 +20,7 @@ from .analysis import (
     summarize_asset_groups,
     top_actionable_fixes,
 )
+from .discovery import answer_city_data_question, find_city_datasets
 from .storage import connect, latest_run_id, report_rows, run_summary
 
 AssetGroupArg = Literal["active_dataset", "needs_manual_review", "archive_snapshot", "event_specific", "measure", "story_reference", "all"]
@@ -245,6 +246,40 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
         return {"run_id": _latest_run_id(db_path), "query": query, "datasets": search_report(db_path, query, clamp_limit(limit))}
 
     @mcp.tool(
+        title="Ask City Data Question",
+        description="Use this when a person asks a plain-English question and needs the best Austin open datasets to answer it.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def ask_city_data_question(question: str, limit: int = 8) -> Dict[str, Any]:
+        normalized_question = question.strip()
+        if not normalized_question:
+            raise ValueError("question is required")
+        with connect(db_path) as conn:
+            run_id = require_latest_run_id(conn)
+            answer = answer_city_data_question(report_rows(conn, run_id), normalized_question, limit=clamp_limit(limit))
+            return {"run_id": run_id, **answer}
+
+    @mcp.tool(
+        title="Find City Datasets",
+        description="Use this when you need ranked Austin open datasets for a civic topic, service, department, or question.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def find_city_datasets_for_question(question: str, limit: int = 10) -> Dict[str, Any]:
+        normalized_question = question.strip()
+        if not normalized_question:
+            raise ValueError("question is required")
+        with connect(db_path) as conn:
+            run_id = require_latest_run_id(conn)
+            matches = find_city_datasets(report_rows(conn, run_id), normalized_question, limit=clamp_limit(limit))
+            return {
+                "run_id": run_id,
+                "question": normalized_question,
+                "datasets": [match.to_result() for match in matches],
+            }
+
+    @mcp.tool(
         name="search",
         title="Search Civic Data Health",
         description="Use this when ChatGPT needs citation-friendly search results from the civic data health report.",
@@ -320,29 +355,8 @@ def search_report(db_path: Path, query: str, limit: int) -> List[Dict[str, Any]]
         raise ValueError("query is required")
     with connect(db_path) as conn:
         run_id = require_latest_run_id(conn)
-        matches = []
-        for row in report_rows(conn, run_id):
-            haystack = normalize_search_text(
-                " ".join(
-                    [
-                        row["dataset_id"],
-                        row["title"],
-                        row["description"],
-                        row.get("asset_type") or "",
-                        str((row.get("classification") or {}).get("group") or ""),
-                        str((row.get("classification") or {}).get("reason") or ""),
-                        " ".join((row.get("classification") or {}).get("evidence") or []),
-                        asset_group(row),
-                        asset_group_label(asset_group(row)),
-                        " ".join(row["issue_codes"]),
-                    ]
-                )
-            )
-            if normalized_query in haystack:
-                matches.append(row)
-            if len(matches) >= limit:
-                break
-    return matches
+        matches = find_city_datasets(report_rows(conn, run_id), query, limit=limit)
+    return [match.row for match in matches]
 
 
 def normalize_search_text(value: str) -> str:

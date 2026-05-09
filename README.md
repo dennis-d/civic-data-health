@@ -66,6 +66,8 @@ Tools:
 - `get_dataset_health`
 - `explain_dataset_issue`
 - `draft_department_email`
+- `ask_city_data_question`
+- `find_city_datasets_for_question`
 - `search_datasets`
 - `search`
 - `fetch`
@@ -133,6 +135,8 @@ The plugin points Codex at the hosted MCP server:
 ```bash
 codex mcp add civic-data-health --url https://civic.pagonya.co/mcp
 ```
+
+For public-facing discovery, use `ask_city_data_question` first. It accepts plain-English questions like "Where can I find police calls?" or "What data shows building permits?" and returns ranked datasets, match reasons, quality caveats, and usable links.
 
 ## Lightsail Deployment
 
