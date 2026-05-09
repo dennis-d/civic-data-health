@@ -14,6 +14,7 @@ class ReportRenderTests(unittest.TestCase):
         self.assertIn("Settings -&gt; Apps &amp; Connectors", html)
         self.assertIn("accept: application/json, text/event-stream", html)
         self.assertIn("https://developers.openai.com/apps-sdk/deploy/connect-chatgpt", html)
+        self.assertIn("Pagonya LLC", html)
 
 
 if __name__ == "__main__":

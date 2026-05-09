@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional
 from .analysis import asset_group, asset_group_label, summarize_asset_groups, top_actionable_fixes
 from .storage import connect, latest_run_id, report_rows, run_summary, skipped_rows
 
-FOOTER = "Independent analysis using public City of Austin open data. Not affiliated with or endorsed by the City of Austin."
+FOOTER = "Prepared by Pagonya LLC using public City of Austin open data. Not affiliated with or endorsed by the City of Austin."
 SECTION_ORDER = ("active_dataset", "needs_manual_review", "archive_snapshot", "event_specific", "measure", "story_reference")
 PUBLIC_SITE_URL = "https://civic.pagonya.co"
 PUBLIC_MCP_URL = PUBLIC_SITE_URL + "/mcp"
