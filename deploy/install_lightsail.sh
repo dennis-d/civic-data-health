@@ -34,7 +34,7 @@ sudo cp "$APP_DIR/deploy/civic-health-refresh.service" /etc/systemd/system/civic
 sudo cp "$APP_DIR/deploy/civic-health-refresh.timer" /etc/systemd/system/civic-health-refresh.timer
 sudo systemctl daemon-reload
 sudo systemctl enable --now civic-health-refresh.timer
-sudo -u civic-health "$APP_DIR/.venv/bin/civic-health" --db "$DATA_DIR/civic_health.sqlite" run --data-dir "$DATA_DIR/data" --out-dir "$WEB_DIR" --force
+sudo -u civic-health "$APP_DIR/.venv/bin/civic-health" --db "$DATA_DIR/civic_health.sqlite" run --data-dir "$DATA_DIR/data" --out-dir "$WEB_DIR" --classification-overrides "$APP_DIR/classification_overrides.json" --force
 sudo systemctl enable civic-health.service
 sudo systemctl restart civic-health.service
 sudo systemctl reload nginx
