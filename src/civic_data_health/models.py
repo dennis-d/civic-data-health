@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 
@@ -42,3 +42,4 @@ class HealthResult:
     freshness_confidence: str
     data_dictionary_quality: Dict[str, Any]
     classification: Dict[str, Any]
+    category_suggestion: Dict[str, Any] = field(default_factory=dict)

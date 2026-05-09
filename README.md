@@ -65,6 +65,8 @@ Tools:
 - `get_classification_methodology`
 - `list_datasets_by_asset_group`
 - `get_dataset_health`
+- `suggest_dataset_category`
+- `list_missing_category_suggestions`
 - `explain_dataset_issue`
 - `draft_department_email`
 - `ask_city_data_question`
@@ -124,6 +126,12 @@ After changing overrides, run with `--force` so the SQLite rows and static repor
 Socrata stories, measures, reference assets, detected event records, and archive snapshots stay visible in the report, but they are grouped separately from active dataset risk so monthly/quarterly snapshots, multi-year statistics, or indicator pages do not distort the high-risk queue.
 
 Column metadata is intentionally outside the global score so enriched and unenriched datasets stay comparable.
+
+## Category Suggestions
+
+Each full run trains a lightweight TF-IDF-style category suggestion model from catalog records that already publish a category. Suggestions are stored separately from Austin's metadata and only appear as review hints when a record is missing a category.
+
+The model uses title, description, tags, publisher/contact text, and Socrata asset type. It does not overwrite the catalog category. Report outputs include `suggested_category`, confidence, status, and evidence fields.
 
 ## Codex Plugin
 

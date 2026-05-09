@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from . import __version__
+from .category_suggestions import build_category_suggestions, category_suggestion_summary
 from .classification import load_classification_overrides
 from .normalize import normalize_catalog
 from .reports import write_reports
@@ -73,7 +74,12 @@ def run_pipeline(
     catalog = json.loads(raw_bytes.decode("utf-8"))
     datasets, skipped, total_records = normalize_catalog(catalog, limit=limit)
     enrich_asset_types(db_path, datasets)
-    health_results = [score_dataset(dataset, classification_overrides=classification_overrides) for dataset in datasets]
+    category_suggestions = build_category_suggestions(datasets)
+    health_results = []
+    for dataset in datasets:
+        result = score_dataset(dataset, classification_overrides=classification_overrides)
+        result.category_suggestion = category_suggestions.get(dataset.dataset_id, {})
+        health_results.append(result)
 
     snapshot_dir = data_dir / "raw" / fetched_at.replace(":", "-")
     snapshot_dir.mkdir(parents=True, exist_ok=True)
@@ -97,6 +103,7 @@ def run_pipeline(
             "path": str(classification_overrides_path) if classification_overrides_path else "",
             "count": len(classification_overrides),
         },
+        "category_suggestions": category_suggestion_summary(category_suggestions),
     }
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 

@@ -71,6 +71,7 @@ def init_db(db_path: Path) -> None:
                 freshness_confidence TEXT NOT NULL,
                 data_dictionary_quality_json TEXT NOT NULL,
                 classification_json TEXT NOT NULL DEFAULT '{}',
+                category_suggestion_json TEXT NOT NULL DEFAULT '{}',
                 PRIMARY KEY (run_id, dataset_id),
                 FOREIGN KEY (run_id, dataset_id) REFERENCES datasets(run_id, dataset_id) ON DELETE CASCADE
             );
@@ -116,6 +117,7 @@ def migrate_existing_schema(conn: sqlite3.Connection) -> None:
     ensure_column(conn, "dataset_health", "freshness_confidence", "TEXT NOT NULL DEFAULT 'unknown'")
     ensure_column(conn, "dataset_health", "data_dictionary_quality_json", "TEXT NOT NULL DEFAULT '{}'")
     ensure_column(conn, "dataset_health", "classification_json", "TEXT NOT NULL DEFAULT '{}'")
+    ensure_column(conn, "dataset_health", "category_suggestion_json", "TEXT NOT NULL DEFAULT '{}'")
 
 
 def ensure_column(conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
@@ -222,8 +224,8 @@ def insert_health(conn: sqlite3.Connection, run_id: int, results: Iterable[Healt
         """
         INSERT INTO dataset_health (
             run_id, dataset_id, score, label, issue_codes_json, remediation_json,
-            freshness_confidence, data_dictionary_quality_json, classification_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            freshness_confidence, data_dictionary_quality_json, classification_json, category_suggestion_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         [
             (
@@ -236,6 +238,7 @@ def insert_health(conn: sqlite3.Connection, run_id: int, results: Iterable[Healt
                 result.freshness_confidence,
                 json.dumps(result.data_dictionary_quality, sort_keys=True),
                 json.dumps(result.classification, sort_keys=True),
+                json.dumps(result.category_suggestion, sort_keys=True),
             )
             for result in results
         ],
@@ -323,7 +326,8 @@ def report_rows(conn: sqlite3.Connection, run_id: int, limit: Optional[int] = No
             d.keywords_json, d.license, d.category, d.accrual_periodicity, d.landing_url,
             d.asset_type,
             d.machine_url, h.score, h.label, h.issue_codes_json, h.remediation_json,
-            h.freshness_confidence, h.data_dictionary_quality_json, h.classification_json
+            h.freshness_confidence, h.data_dictionary_quality_json, h.classification_json,
+            h.category_suggestion_json
         FROM datasets d
         JOIN dataset_health h ON h.run_id = d.run_id AND h.dataset_id = d.dataset_id
         WHERE d.run_id = ?
@@ -400,6 +404,7 @@ def _decode_row(row: sqlite3.Row) -> Dict[str, Any]:
     item["remediation"] = json.loads(item.pop("remediation_json"))
     item["data_dictionary_quality"] = json.loads(item.pop("data_dictionary_quality_json"))
     item["classification"] = json.loads(item.pop("classification_json") or "{}")
+    item["category_suggestion"] = json.loads(item.pop("category_suggestion_json") or "{}")
     if not item["classification"].get("group"):
         item["classification"] = legacy_classification(item)
     return item

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from .analysis import asset_group, asset_group_label, summarize_asset_groups, top_actionable_fixes
+from .category_suggestions import rows_with_category_suggestions
 from .storage import connect, latest_run_id, report_rows, run_summary, skipped_rows
 
 FOOTER = "Prepared by Pagonya LLC using public City of Austin open data. Not affiliated with or endorsed by the City of Austin."
@@ -79,6 +80,10 @@ def write_csv(path: Path, rows) -> None:
         "license",
         "category",
         "tags",
+        "suggested_category",
+        "suggested_category_confidence",
+        "suggested_category_status",
+        "suggested_category_evidence",
         "landing_url",
         "machine_url",
         "asset_type",
@@ -105,6 +110,10 @@ def write_csv(path: Path, rows) -> None:
                     "license": row["license"],
                     "category": row["category"],
                     "tags": ";".join(row.get("keywords") or []),
+                    "suggested_category": (row.get("category_suggestion") or {}).get("suggested_category", ""),
+                    "suggested_category_confidence": (row.get("category_suggestion") or {}).get("confidence", ""),
+                    "suggested_category_status": (row.get("category_suggestion") or {}).get("status", ""),
+                    "suggested_category_evidence": ";".join((row.get("category_suggestion") or {}).get("evidence", [])),
                     "landing_url": row["landing_url"],
                     "machine_url": row["machine_url"],
                     "asset_type": row.get("asset_type") or "",
@@ -136,8 +145,11 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
     section_markup = "\n".join(render_asset_section(group, rows, group_summary[group]) for group in SECTION_ORDER)
     group_markup = "\n".join(render_group_metric(group_summary[group]) for group in SECTION_ORDER)
     actionable_markup = "\n".join(render_actionable_row(item) for item in actionable)
+    suggestion_markup = "\n".join(render_category_suggestion_row(row) for row in rows_with_category_suggestions(rows, limit=25))
     if not actionable_markup:
         actionable_markup = '<tr><td colspan="6">No active dataset fixes are currently ranked above the review threshold.</td></tr>'
+    if not suggestion_markup:
+        suggestion_markup = '<tr><td colspan="6">No missing-category suggestions are available in this run.</td></tr>'
     return """<!doctype html>
 <html lang="en">
 <head>
@@ -203,6 +215,7 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
         <a href="#measure">Measures and indicators</a>
         <a href="#story_reference">Stories and reference</a>
         <a href="#actionable">Top fix opportunities</a>
+        <a href="#category-suggestions">Category suggestions</a>
       </nav>
     </main>
   </header>
@@ -218,6 +231,14 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
       <thead><tr><th>Dataset</th><th>Priority</th><th>Score</th><th>Label</th><th>Owner</th><th>Actions</th></tr></thead>
       <tbody>
         {actionable_rows}
+      </tbody>
+    </table>
+    <h2 id="category-suggestions">Missing Category Suggestions</h2>
+    <p class="section-note">Suggestions are trained from catalog rows that already publish categories. They do not overwrite Austin's metadata; they are review hints for missing-category records.</p>
+    <table>
+      <thead><tr><th>Dataset</th><th>Suggested Category</th><th>Confidence</th><th>Status</th><th>Evidence</th><th>Issues</th></tr></thead>
+      <tbody>
+        {suggestion_rows}
       </tbody>
     </table>
     {sections}
@@ -238,6 +259,7 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
         average=summary["average_score"],
         group_metrics=group_markup,
         actionable_rows=actionable_markup,
+        suggestion_rows=suggestion_markup,
         sections=section_markup,
         skipped_count=summary["skipped_records"],
         skipped_markup=skipped_markup,
@@ -308,6 +330,29 @@ def render_actionable_row(item: Dict[str, Any]) -> str:
     )
 
 
+def render_category_suggestion_row(row: Dict[str, Any]) -> str:
+    suggestion = row.get("category_suggestion") or {}
+    title = escape(row["title"] or row["dataset_id"])
+    detail_href = "datasets/%s.html" % escape(row["dataset_id"])
+    title = '<a href="{url}">{title}</a>'.format(url=detail_href, title=title)
+    return """<tr>
+  <td data-label="Dataset" class="title">{title}<div class="issues">{dataset_id}</div></td>
+  <td data-label="Suggested Category">{suggested_category}</td>
+  <td data-label="Confidence">{confidence}</td>
+  <td data-label="Status">{status}</td>
+  <td data-label="Evidence" class="issues">{evidence}</td>
+  <td data-label="Issues" class="issues">{issues}</td>
+</tr>""".format(
+        title=title,
+        dataset_id=escape(row["dataset_id"]),
+        suggested_category=escape(suggestion.get("suggested_category") or ""),
+        confidence=escape(format_confidence(suggestion)),
+        status=escape(suggestion.get("status") or ""),
+        evidence=escape(", ".join(suggestion.get("evidence") or [])),
+        issues=escape(", ".join(row.get("issue_codes") or [])),
+    )
+
+
 def render_dataset_row(row: Dict[str, Any]) -> str:
     remediation = " ".join(row["remediation"])
     owner = row["publisher"] or row["contact"] or "Missing"
@@ -356,6 +401,7 @@ def render_detail_page(summary: Dict[str, Any], row: Dict[str, Any]) -> str:
     landing = row.get("landing_url") or ""
     machine = row.get("machine_url") or ""
     tags = format_tags(row)
+    category_suggestion = render_category_suggestion_detail(row)
     return """<!doctype html>
 <html lang="en">
 <head>
@@ -404,6 +450,7 @@ def render_detail_page(summary: Dict[str, Any], row: Dict[str, Any]) -> str:
       <p><strong>Contact:</strong> {contact}</p>
       <p><strong>Category:</strong> {category}</p>
       <p><strong>Tags:</strong> {tags}</p>
+      {category_suggestion}
       <p><strong>License:</strong> {license}</p>
       <p><strong>Landing page:</strong> {landing}</p>
       <p><strong>Machine URL:</strong> {machine}</p>
@@ -429,6 +476,7 @@ def render_detail_page(summary: Dict[str, Any], row: Dict[str, Any]) -> str:
         contact=escape(row.get("contact") or "Missing"),
         category=format_category(row),
         tags=tags,
+        category_suggestion=category_suggestion,
         license=escape(row.get("license") or "Missing"),
         landing=('<a href="%s">%s</a>' % (escape(landing), escape(landing))) if landing else "Missing",
         machine=('<a href="%s">%s</a>' % (escape(machine), escape(machine))) if machine else "Missing",
@@ -452,6 +500,33 @@ def format_tags(row: Dict[str, Any]) -> str:
     if not keywords:
         return "Missing"
     return escape(", ".join(str(keyword) for keyword in keywords))
+
+
+def render_category_suggestion_detail(row: Dict[str, Any]) -> str:
+    suggestion = row.get("category_suggestion") or {}
+    suggested_category = suggestion.get("suggested_category") or ""
+    if not suggested_category:
+        return ""
+    evidence = ", ".join(suggestion.get("evidence") or []) or "No shared tokens"
+    return (
+        "<p><strong>Suggested category:</strong> {category} "
+        "({confidence}, {status}). <strong>Evidence:</strong> {evidence}</p>"
+    ).format(
+        category=escape(suggested_category),
+        confidence=escape(format_confidence(suggestion)),
+        status=escape(suggestion.get("status") or "unknown"),
+        evidence=escape(evidence),
+    )
+
+
+def format_confidence(suggestion: Dict[str, Any]) -> str:
+    confidence = suggestion.get("confidence")
+    if confidence is None or confidence == "":
+        return "unknown confidence"
+    try:
+        return "%d%% confidence" % round(float(confidence) * 100)
+    except (TypeError, ValueError):
+        return "%s confidence" % confidence
 
 
 def render_methodology_page(summary: Dict[str, Any]) -> str:
@@ -504,6 +579,10 @@ def render_methodology_page(summary: Dict[str, Any]) -> str:
       <h2>Scoring</h2>
       <p>Scores start at 100. Missing modified dates, weak descriptions, missing owner/contact metadata, and missing license/category/tags reduce the score. Known-cadence datasets get a full stale penalty when modified dates are past 1.5x the expected period. Unknown-cadence active records get only a low-confidence freshness issue.</p>
       <p>Active-like records without a distribution or machine-readable URL are hard-labelled high risk. Archive, event, measure, and reference records keep those issues visible but are not promoted into the active high-risk queue.</p>
+    </div>
+    <div class="panel">
+      <h2>Category Suggestions</h2>
+      <p>Records with missing categories receive a trained suggestion when the current catalog has enough labeled examples. The model uses title, description, tags, publisher/contact text, and Socrata asset type. Suggestions are review hints only and do not overwrite City of Austin catalog metadata.</p>
     </div>
     <div class="panel">
       <h2>Manual Overrides</h2>

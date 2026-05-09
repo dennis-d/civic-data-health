@@ -48,6 +48,7 @@ class StorageMigrationTests(unittest.TestCase):
             self.assertIn("issue_codes_json", health_columns)
             self.assertIn("data_dictionary_quality_json", health_columns)
             self.assertIn("classification_json", health_columns)
+            self.assertIn("category_suggestion_json", health_columns)
             migrated.close()
 
     def test_view_metadata_cache_round_trip(self):

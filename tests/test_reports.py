@@ -33,6 +33,12 @@ class ReportRenderTests(unittest.TestCase):
                 "contact": "no-reply@example.com",
                 "category": "",
                 "keywords": ["map", "texas", "county"],
+                "category_suggestion": {
+                    "status": "suggested",
+                    "suggested_category": "Locations and Maps",
+                    "confidence": 0.84,
+                    "evidence": ["map", "county"],
+                },
                 "license": "",
                 "landing_url": "https://data.austintexas.gov/d/sw7f-2kkd",
                 "machine_url": "https://data.austintexas.gov/api/views/sw7f-2kkd/rows.csv?accessType=DOWNLOAD",
@@ -41,6 +47,8 @@ class ReportRenderTests(unittest.TestCase):
 
         self.assertIn("Category:</strong> Missing (tags available: map, texas, county)", html)
         self.assertIn("Tags:</strong> map, texas, county", html)
+        self.assertIn("Suggested category:</strong> Locations and Maps", html)
+        self.assertIn("Evidence:</strong> map, county", html)
 
 
 if __name__ == "__main__":

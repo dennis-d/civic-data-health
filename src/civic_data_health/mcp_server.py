@@ -20,6 +20,7 @@ from .analysis import (
     summarize_asset_groups,
     top_actionable_fixes,
 )
+from .category_suggestions import rows_with_category_suggestions
 from .discovery import answer_city_data_question, find_city_datasets
 from .row_answer import answer_row_level_question, build_date_where, DateRange
 from .socrata import count_rows, get_dataset_schema as load_socrata_schema, get_sample_rows as load_socrata_sample_rows
@@ -203,6 +204,57 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
             if row:
                 return {"run_id": run_id, "dataset": row}
         return {"run_id": run_id, "dataset": None, "message": "Dataset id not found in latest run."}
+
+    @mcp.tool(
+        title="Suggest Dataset Category",
+        description="Use this when a dataset has a missing category and you need the trained category suggestion with evidence.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def suggest_dataset_category(dataset_id: str) -> Dict[str, Any]:
+        normalized_id = dataset_id.strip().lower()
+        if not normalized_id:
+            raise ValueError("dataset_id is required")
+        with connect(db_path) as conn:
+            run_id = require_latest_run_id(conn)
+            row = find_dataset(report_rows(conn, run_id), normalized_id)
+            if row is None:
+                raise ValueError("Dataset id not found in latest run: %s" % normalized_id)
+            return {
+                "run_id": run_id,
+                "dataset_id": row["dataset_id"],
+                "title": row["title"],
+                "catalog_category": row.get("category") or "",
+                "keywords": row.get("keywords") or [],
+                "category_suggestion": row.get("category_suggestion") or {},
+            }
+
+    @mcp.tool(
+        title="List Missing Category Suggestions",
+        description="Use this when you need missing-category records with trained category suggestions, confidence, and evidence.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def list_missing_category_suggestions(limit: int = 25) -> Dict[str, Any]:
+        safe_limit = clamp_limit(limit)
+        with connect(db_path) as conn:
+            run_id = require_latest_run_id(conn)
+            rows = rows_with_category_suggestions(report_rows(conn, run_id), limit=safe_limit)
+            return {
+                "run_id": run_id,
+                "datasets": [
+                    {
+                        "dataset_id": row["dataset_id"],
+                        "title": row["title"],
+                        "label": row["label"],
+                        "issue_codes": row.get("issue_codes") or [],
+                        "keywords": row.get("keywords") or [],
+                        "landing_url": row.get("landing_url") or "",
+                        "category_suggestion": row.get("category_suggestion") or {},
+                    }
+                    for row in rows
+                ],
+            }
 
     @mcp.tool(
         title="Explain Dataset Issue",
@@ -406,6 +458,8 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
                             "asset_type": row.get("asset_type") or "",
                             "classification_group": str((row.get("classification") or {}).get("group") or ""),
                             "classification_confidence": str((row.get("classification") or {}).get("confidence") or ""),
+                            "suggested_category": str((row.get("category_suggestion") or {}).get("suggested_category") or ""),
+                            "suggested_category_confidence": str((row.get("category_suggestion") or {}).get("confidence") or ""),
                             "run_id": str(run_id),
                         },
                     }
@@ -470,6 +524,7 @@ def dataset_text(row: Dict[str, Any]) -> str:
         "contact": row.get("contact") or "",
         "keywords": row.get("keywords") or [],
         "category": row.get("category") or "",
+        "category_suggestion": row.get("category_suggestion") or {},
         "issue_codes": row["issue_codes"],
         "remediation": row["remediation"],
         "landing_url": dataset_url(row),
