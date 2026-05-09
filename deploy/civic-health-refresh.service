@@ -1,0 +1,17 @@
+[Unit]
+Description=Refresh Civic Data Health Austin report
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=civic-health
+Group=civic-health
+WorkingDirectory=/opt/civic-data-health
+ExecStart=/opt/civic-data-health/.venv/bin/civic-health --db /var/lib/civic-data-health/civic_health.sqlite run --data-dir /var/lib/civic-data-health/data --out-dir /var/www/civic-data-health
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/civic-data-health /var/www/civic-data-health
+

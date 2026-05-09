@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "civic-data-health"
+version = "0.1.0"
+description = "Deterministic Austin open data health reports and read-only MCP tools."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+civic-health = "civic_data_health.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
