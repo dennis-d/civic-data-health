@@ -7,12 +7,14 @@ name = "civic-data-health"
 version = "0.1.0"
 description = "Deterministic Austin open data health reports and read-only MCP tools."
 readme = "README.md"
-requires-python = ">=3.9"
-dependencies = []
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.27.1,<2",
+    "uvicorn>=0.31,<1",
+]
 
 [project.scripts]
 civic-health = "civic_data_health.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-

@@ -20,6 +20,7 @@ class NormalizedDataset:
     distribution: List[Dict[str, Any]]
     machine_url: str
     raw: Dict[str, Any]
+    asset_type: str = ""
 
 
 @dataclass
@@ -40,4 +41,3 @@ class HealthResult:
     remediation: List[str]
     freshness_confidence: str
     data_dictionary_quality: Dict[str, Any]
-

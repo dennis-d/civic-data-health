@@ -55,6 +55,7 @@ def init_db(db_path: Path) -> None:
                 landing_url TEXT NOT NULL,
                 distribution_json TEXT NOT NULL,
                 machine_url TEXT NOT NULL,
+                asset_type TEXT NOT NULL DEFAULT '',
                 raw_json TEXT NOT NULL,
                 PRIMARY KEY (run_id, dataset_id)
             );
@@ -108,6 +109,7 @@ def migrate_existing_schema(conn: sqlite3.Connection) -> None:
     ensure_column(conn, "runs", "errored_count", "INTEGER NOT NULL DEFAULT 0")
     ensure_column(conn, "runs", "limit_applied", "INTEGER")
     ensure_column(conn, "runs", "tool_version", "TEXT NOT NULL DEFAULT 'pre-repo'")
+    ensure_column(conn, "datasets", "asset_type", "TEXT NOT NULL DEFAULT ''")
     ensure_column(conn, "dataset_health", "issue_codes_json", "TEXT NOT NULL DEFAULT '[]'")
     ensure_column(conn, "dataset_health", "freshness_confidence", "TEXT NOT NULL DEFAULT 'unknown'")
     ensure_column(conn, "dataset_health", "data_dictionary_quality_json", "TEXT NOT NULL DEFAULT '{}'")
@@ -184,8 +186,8 @@ def insert_datasets(conn: sqlite3.Connection, run_id: int, datasets: Iterable[No
         """
         INSERT INTO datasets (
             run_id, dataset_id, title, description, modified, publisher, contact, keywords_json,
-            license, category, accrual_periodicity, landing_url, distribution_json, machine_url, raw_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            license, category, accrual_periodicity, landing_url, distribution_json, machine_url, asset_type, raw_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         [
             (
@@ -203,6 +205,7 @@ def insert_datasets(conn: sqlite3.Connection, run_id: int, datasets: Iterable[No
                 dataset.landing_url,
                 json.dumps(dataset.distribution, sort_keys=True),
                 dataset.machine_url,
+                dataset.asset_type,
                 json.dumps(dataset.raw, sort_keys=True),
             )
             for dataset in datasets
@@ -259,6 +262,7 @@ def report_rows(conn: sqlite3.Connection, run_id: int, limit: Optional[int] = No
         SELECT
             d.dataset_id, d.title, d.description, d.modified, d.publisher, d.contact,
             d.keywords_json, d.license, d.category, d.accrual_periodicity, d.landing_url,
+            d.asset_type,
             d.machine_url, h.score, h.label, h.issue_codes_json, h.remediation_json,
             h.freshness_confidence, h.data_dictionary_quality_json
         FROM datasets d

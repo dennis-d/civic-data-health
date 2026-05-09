@@ -16,6 +16,34 @@ BOILERPLATE_DESCRIPTIONS = {
     "no description available",
 }
 
+POINT_IN_TIME_TERMS = {
+    "annual report",
+    "annual progress report",
+    "annual highlights",
+    "assessment",
+    "approved ce",
+    "covid",
+    "flood",
+    "highlights",
+    "homepage",
+    "hurricane",
+    "meals and snacks served",
+    "memorial day",
+    "pandemic",
+    "progress report",
+    "report",
+    "storm",
+    "summer meals",
+    "winter storm",
+    "year in review",
+}
+
+STANDALONE_EVENT_TERMS = {
+    "during the pandemic",
+    "hurricane harvey",
+    "winter storm",
+}
+
 
 def score_dataset(dataset: NormalizedDataset, now: Optional[datetime] = None, columns_checked: bool = False) -> HealthResult:
     now = now or datetime.now(timezone.utc)
@@ -23,6 +51,20 @@ def score_dataset(dataset: NormalizedDataset, now: Optional[datetime] = None, co
     issues = []
     remediation = []
     freshness_confidence = "high"
+    reference_issue = reference_asset_issue_code(dataset)
+    reference_asset = reference_issue is not None
+    point_in_time = is_point_in_time_record(dataset)
+    if reference_issue:
+        issues.append(reference_issue)
+        if reference_issue == "socrata_measure_asset":
+            remediation.append("Treat this as a Socrata measure/indicator asset, not a machine-readable dataset; keep it out of the active dataset risk queue.")
+        else:
+            remediation.append("Treat this as a story/reference page, not an active machine-readable dataset; score it outside the active dataset risk queue.")
+        freshness_confidence = "not_applicable"
+    if point_in_time:
+        issues.append("point_in_time_or_event_record")
+        remediation.append("Confirm this is an archival/event-specific record; if so, mark it as archival and exclude it from active freshness expectations.")
+        freshness_confidence = "not_applicable"
 
     modified_dt = parse_datetime(dataset.modified)
     cadence_days = parse_accrual_periodicity_days(dataset.accrual_periodicity)
@@ -32,6 +74,8 @@ def score_dataset(dataset: NormalizedDataset, now: Optional[datetime] = None, co
         issues.append("modified_missing")
         remediation.append("Add or repair the dataset modified timestamp.")
         freshness_confidence = "missing"
+    elif reference_asset or point_in_time:
+        pass
     elif cadence_days is not None:
         age_days = max((now - modified_dt).total_seconds() / 86400, 0)
         if age_days > cadence_days * 1.5:
@@ -76,13 +120,19 @@ def score_dataset(dataset: NormalizedDataset, now: Optional[datetime] = None, co
 
     hard_override = False
     if not dataset.distribution:
-        hard_override = True
+        hard_override = not reference_asset and not point_in_time
         issues.append("no_distribution")
-        remediation.append("Publish at least one distribution for machine or user access.")
+        if reference_asset or point_in_time:
+            remediation.append("If this record is meant to be machine-readable data, add a distribution; otherwise classify it separately as a reference, indicator, or archive asset.")
+        else:
+            remediation.append("Publish at least one distribution for machine or user access.")
     elif not dataset.machine_url:
-        hard_override = True
+        hard_override = not reference_asset and not point_in_time
         issues.append("no_machine_readable_url")
-        remediation.append("Add downloadURL or accessURL to at least one distribution.")
+        if reference_asset or point_in_time:
+            remediation.append("If this record is meant to be machine-readable data, add downloadURL or accessURL; otherwise classify it as a reference, indicator, or archive asset.")
+        else:
+            remediation.append("Add downloadURL or accessURL to at least one distribution.")
 
     score = max(0, min(100, score))
     label = "good" if score >= 80 else "needs_review" if score >= 50 else "high_risk"
@@ -158,6 +208,27 @@ def description_issue_code(title: str, description: str) -> Optional[str]:
     return None
 
 
+def is_point_in_time_record(dataset: NormalizedDataset) -> bool:
+    if dataset.accrual_periodicity:
+        return False
+    text = " ".join([dataset.title or "", dataset.description or ""]).casefold()
+    if any(term in text for term in STANDALONE_EVENT_TERMS):
+        return True
+    has_year = re.search(r"\b(?:19|20)\d{2}(?:\s*[-/]\s*(?:19|20)?\d{2})?\b|\bfy\s*(?:19|20)\d{2}\b", text)
+    return bool(has_year and any(term in text for term in POINT_IN_TIME_TERMS))
+
+
+def reference_asset_issue_code(dataset: NormalizedDataset) -> Optional[str]:
+    asset_type = dataset.asset_type.casefold()
+    if asset_type == "story":
+        return "socrata_story_page"
+    if asset_type == "measure":
+        return "socrata_measure_asset"
+    if asset_type in {"href", "blob", "file"}:
+        return "socrata_reference_asset"
+    return None
+
+
 def dedupe(values):
     seen = set()
     out = []
@@ -167,4 +238,3 @@ def dedupe(values):
         seen.add(value)
         out.append(value)
     return out
-

@@ -23,7 +23,7 @@ else
   sudo git clone "$REPO_URL" "$APP_DIR"
 fi
 
-sudo python3 -m venv "$APP_DIR/.venv"
+sudo /usr/local/bin/uv venv --python 3.12 "$APP_DIR/.venv"
 sudo "$APP_DIR/.venv/bin/pip" install --upgrade pip
 sudo "$APP_DIR/.venv/bin/pip" install "$APP_DIR"
 sudo rm -rf "$APP_DIR/build"
@@ -32,7 +32,7 @@ sudo cp "$APP_DIR/deploy/civic-health-refresh.service" /etc/systemd/system/civic
 sudo cp "$APP_DIR/deploy/civic-health-refresh.timer" /etc/systemd/system/civic-health-refresh.timer
 sudo systemctl daemon-reload
 sudo systemctl enable --now civic-health-refresh.timer
-sudo systemctl restart civic-health-refresh.service
+sudo -u civic-health "$APP_DIR/.venv/bin/civic-health" --db "$DATA_DIR/civic_health.sqlite" run --data-dir "$DATA_DIR/data" --out-dir "$WEB_DIR" --force
 sudo systemctl enable civic-health.service
 sudo systemctl restart civic-health.service
 sudo systemctl reload nginx

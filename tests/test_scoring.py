@@ -50,6 +50,83 @@ class ScoringTests(unittest.TestCase):
         self.assertIn("no_distribution", result.issue_codes)
         self.assertEqual(result.label, "high_risk")
 
+    def test_event_specific_record_is_not_forced_high_risk(self):
+        result = score_dataset(
+            dataset(
+                title="2013 Halloween Flood",
+                description="",
+                modified="2022-09-01",
+                accrual_periodicity="",
+                keywords=[],
+                license="",
+                category="",
+                distribution=[],
+                machine_url="",
+            ),
+            now=datetime(2026, 5, 9, tzinfo=timezone.utc),
+        )
+        self.assertIn("point_in_time_or_event_record", result.issue_codes)
+        self.assertNotIn("freshness_old_unknown_cadence", result.issue_codes)
+        self.assertEqual(result.freshness_confidence, "not_applicable")
+        self.assertEqual(result.label, "needs_review")
+
+    def test_narrative_pandemic_record_is_not_forced_high_risk(self):
+        result = score_dataset(
+            dataset(
+                title="A Pivot to Keep Sustainability in the Classroom during the Pandemic",
+                description="",
+                modified="2021-06-01",
+                accrual_periodicity="",
+                keywords=[],
+                license="",
+                category="",
+                distribution=[],
+                machine_url="",
+            ),
+            now=datetime(2026, 5, 9, tzinfo=timezone.utc),
+        )
+        self.assertIn("point_in_time_or_event_record", result.issue_codes)
+        self.assertEqual(result.label, "needs_review")
+
+    def test_socrata_story_page_is_not_forced_high_risk(self):
+        result = score_dataset(
+            dataset(
+                title="Age-Friendly Austin",
+                description="",
+                modified="2023-01-11",
+                accrual_periodicity="",
+                keywords=[],
+                license="",
+                category="",
+                distribution=[],
+                machine_url="",
+                asset_type="story",
+            ),
+            now=datetime(2026, 5, 9, tzinfo=timezone.utc),
+        )
+        self.assertIn("socrata_story_page", result.issue_codes)
+        self.assertNotIn("freshness_old_unknown_cadence", result.issue_codes)
+        self.assertEqual(result.label, "needs_review")
+
+    def test_socrata_measure_asset_is_not_forced_high_risk(self):
+        result = score_dataset(
+            dataset(
+                title="FY2023 Multifamily Rating",
+                description="FY2023 Multifamily Rating",
+                modified="2025-04-24",
+                accrual_periodicity="",
+                license="",
+                distribution=[],
+                machine_url="",
+                asset_type="measure",
+            ),
+            now=datetime(2026, 5, 9, tzinfo=timezone.utc),
+        )
+        self.assertIn("socrata_measure_asset", result.issue_codes)
+        self.assertIn("no_distribution", result.issue_codes)
+        self.assertEqual(result.freshness_confidence, "not_applicable")
+        self.assertEqual(result.label, "needs_review")
+
     def test_cadence_parser(self):
         self.assertEqual(parse_accrual_periodicity_days("R/P1Y"), 365)
         self.assertEqual(parse_accrual_periodicity_days("R/P1M"), 30)
@@ -58,4 +135,3 @@ class ScoringTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

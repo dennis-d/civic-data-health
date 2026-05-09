@@ -4,6 +4,7 @@ import hashlib
 import json
 import shutil
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -23,6 +24,7 @@ from .storage import (
 )
 
 DEFAULT_SOURCE_URL = "https://data.austintexas.gov/data.json"
+SOCRATA_VIEW_URL = "https://data.austintexas.gov/api/views/{dataset_id}"
 
 
 def fetch_bytes(url: str, timeout: float = 60.0) -> bytes:
@@ -38,6 +40,10 @@ def fetch_bytes(url: str, timeout: float = 60.0) -> bytes:
         if status >= 400:
             raise RuntimeError("HTTP %s fetching %s" % (status, url))
         return response.read()
+
+
+def fetch_json(url: str, timeout: float = 30.0) -> Dict[str, Any]:
+    return json.loads(fetch_bytes(url, timeout=timeout).decode("utf-8"))
 
 
 def run_pipeline(
@@ -63,6 +69,7 @@ def run_pipeline(
 
     catalog = json.loads(raw_bytes.decode("utf-8"))
     datasets, skipped, total_records = normalize_catalog(catalog, limit=limit)
+    enrich_asset_types(db_path, datasets)
     health_results = [score_dataset(dataset) for dataset in datasets]
 
     snapshot_dir = data_dir / "raw" / fetched_at.replace(":", "-")
@@ -124,3 +131,88 @@ def run_pipeline(
     report_paths = write_reports(db_path=db_path, out_dir=out_dir, run_id=run_id) if out_dir else {}
     return {"run_id": run_id, "status": "processed", "catalog_sha256": catalog_sha256, "report_paths": report_paths}
 
+
+def enrich_asset_types(db_path: Path, datasets, max_workers: int = 8) -> None:
+    candidates = [dataset for dataset in datasets if not dataset.distribution or not dataset.machine_url]
+    if not candidates:
+        return
+
+    cached = {}
+    with connect(db_path) as conn:
+        for dataset in candidates:
+            row = conn.execute(
+                """
+                SELECT raw_json
+                FROM view_metadata_cache
+                WHERE dataset_id = ? AND COALESCE(source_modified, '') = COALESCE(?, '')
+                """,
+                (dataset.dataset_id, dataset.modified),
+            ).fetchone()
+            if row:
+                try:
+                    cached[dataset.dataset_id] = json.loads(row["raw_json"])
+                except json.JSONDecodeError:
+                    pass
+
+    for dataset in candidates:
+        raw = cached.get(dataset.dataset_id)
+        if raw:
+            dataset.asset_type = extract_asset_type(raw)
+
+    missing = [dataset for dataset in candidates if not dataset.asset_type]
+    if not missing:
+        return
+
+    fetched = {}
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_dataset = {
+            executor.submit(fetch_view_metadata, dataset.dataset_id): dataset
+            for dataset in missing
+        }
+        for future in as_completed(future_to_dataset):
+            dataset = future_to_dataset[future]
+            try:
+                raw = future.result()
+            except Exception:
+                continue
+            dataset.asset_type = extract_asset_type(raw)
+            fetched[dataset.dataset_id] = (dataset, raw)
+
+    if not fetched:
+        return
+    with connect(db_path) as conn:
+        conn.executemany(
+            """
+            INSERT INTO view_metadata_cache (dataset_id, source_modified, fetched_at, columns_json, raw_json, http_status)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(dataset_id) DO UPDATE SET
+                source_modified = excluded.source_modified,
+                fetched_at = excluded.fetched_at,
+                columns_json = excluded.columns_json,
+                raw_json = excluded.raw_json,
+                http_status = excluded.http_status
+            """,
+            [
+                (
+                    dataset.dataset_id,
+                    dataset.modified,
+                    datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+                    json.dumps(raw.get("columns") or [], sort_keys=True),
+                    json.dumps(raw, sort_keys=True),
+                    200,
+                )
+                for dataset, raw in fetched.values()
+            ],
+        )
+
+
+def fetch_view_metadata(dataset_id: str) -> Dict[str, Any]:
+    return fetch_json(SOCRATA_VIEW_URL.format(dataset_id=dataset_id), timeout=30.0)
+
+
+def extract_asset_type(raw: Dict[str, Any]) -> str:
+    for key in ("assetType", "viewType", "displayType"):
+        value = raw.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip().lower()
+    return ""

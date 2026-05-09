@@ -40,9 +40,11 @@ class StorageMigrationTests(unittest.TestCase):
 
             migrated = sqlite3.connect(str(db_path))
             run_columns = {row[1] for row in migrated.execute("PRAGMA table_info(runs)").fetchall()}
+            dataset_columns = {row[1] for row in migrated.execute("PRAGMA table_info(datasets)").fetchall()}
             health_columns = {row[1] for row in migrated.execute("PRAGMA table_info(dataset_health)").fetchall()}
             self.assertIn("limit_applied", run_columns)
             self.assertIn("tool_version", run_columns)
+            self.assertIn("asset_type", dataset_columns)
             self.assertIn("issue_codes_json", health_columns)
             self.assertIn("data_dictionary_quality_json", health_columns)
             migrated.close()
@@ -50,4 +52,3 @@ class StorageMigrationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

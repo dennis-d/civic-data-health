@@ -28,6 +28,7 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
     csv_path = out_dir / "austin_dataset_health.csv"
     html_path = out_dir / "austin_dataset_health.html"
     index_path = out_dir / "index.html"
+    detail_dir = out_dir / "datasets"
 
     payload = {
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
@@ -37,6 +38,7 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
     }
     json_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     write_csv(csv_path, rows)
+    write_detail_pages(detail_dir, summary, rows)
     html_text = render_html(summary, rows, skipped)
     html_path.write_text(html_text, encoding="utf-8")
     index_path.write_text(html_text, encoding="utf-8")
@@ -46,6 +48,7 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
         "csv": str(csv_path),
         "html": str(html_path),
         "index": str(index_path),
+        "details": str(detail_dir),
     }
 
 
@@ -63,6 +66,7 @@ def write_csv(path: Path, rows) -> None:
         "category",
         "landing_url",
         "machine_url",
+        "asset_type",
         "remediation",
     ]
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -83,6 +87,7 @@ def write_csv(path: Path, rows) -> None:
                     "category": row["category"],
                     "landing_url": row["landing_url"],
                     "machine_url": row["machine_url"],
+                    "asset_type": row.get("asset_type") or "",
                     "remediation": " ".join(row["remediation"]),
                 }
             )
@@ -141,10 +146,10 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
   <header>
     <main>
       <h1>Civic Data Health</h1>
-      <p>Austin Open Data metadata audit generated from the public DCAT catalog.</p>
+      <p>Austin Open Data metadata audit generated from the public DCAT catalog. Socrata story, measure, and reference assets are separated from active dataset risk.</p>
       <div class="summary">
         <div class="metric"><strong>{analyzed}</strong><span>Analyzed of {total} catalog records</span></div>
-        <div class="metric"><strong>{high_risk}</strong><span>High-risk datasets</span></div>
+        <div class="metric"><strong>{high_risk}</strong><span>High-risk active datasets</span></div>
         <div class="metric"><strong>{needs_review}</strong><span>Needs review</span></div>
         <div class="metric"><strong>{good}</strong><span>Good</span></div>
         <div class="metric"><strong>{skipped}</strong><span>Skipped normalization records</span></div>
@@ -159,7 +164,7 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
   <main>
     <h2>Top Findings</h2>
     <table>
-      <thead><tr><th>Dataset</th><th>Score</th><th>Label</th><th>Modified</th><th>Owner</th><th>Issues</th><th>Remediation</th></tr></thead>
+      <thead><tr><th>Dataset</th><th>Score</th><th>Label</th><th>Asset</th><th>Modified</th><th>Owner</th><th>Issues</th><th>Remediation</th></tr></thead>
       <tbody>
         {rows}
       </tbody>
@@ -192,12 +197,13 @@ def render_dataset_row(row: Dict[str, Any]) -> str:
     remediation = " ".join(row["remediation"])
     owner = row["publisher"] or row["contact"] or "Missing"
     title = escape(row["title"] or row["dataset_id"])
-    if row["landing_url"]:
-        title = '<a href="{url}">{title}</a>'.format(url=escape(row["landing_url"]), title=title)
+    detail_href = "datasets/%s.html" % escape(row["dataset_id"])
+    title = '<a href="{url}">{title}</a>'.format(url=detail_href, title=title)
     return """<tr>
   <td data-label="Dataset" class="title">{title}<div class="issues">{dataset_id}</div></td>
   <td data-label="Score">{score}</td>
   <td data-label="Label" class="label {label}">{label}</td>
+  <td data-label="Asset">{asset_type}</td>
   <td data-label="Modified">{modified}</td>
   <td data-label="Owner">{owner}</td>
   <td data-label="Issues" class="issues">{issues}</td>
@@ -207,6 +213,7 @@ def render_dataset_row(row: Dict[str, Any]) -> str:
         dataset_id=escape(row["dataset_id"]),
         score=row["score"],
         label=escape(row["label"]),
+        asset_type=escape(row.get("asset_type") or "dataset"),
         modified=escape(row["modified"] or "Missing"),
         owner=escape(owner),
         issues=escape(", ".join(row["issue_codes"])),
@@ -214,6 +221,88 @@ def render_dataset_row(row: Dict[str, Any]) -> str:
     )
 
 
+def write_detail_pages(detail_dir: Path, summary: Dict[str, Any], rows) -> None:
+    detail_dir.mkdir(parents=True, exist_ok=True)
+    for row in rows:
+        path = detail_dir / ("%s.html" % row["dataset_id"])
+        path.write_text(render_detail_page(summary, row), encoding="utf-8")
+
+
+def render_detail_page(summary: Dict[str, Any], row: Dict[str, Any]) -> str:
+    issue_items = "".join("<li>%s</li>" % escape(issue) for issue in row["issue_codes"])
+    remediation_items = "".join("<li>%s</li>" % escape(item) for item in row["remediation"])
+    landing = row.get("landing_url") or ""
+    machine = row.get("machine_url") or ""
+    return """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title} - Civic Data Health</title>
+  <style>
+    :root {{ color-scheme: light; --ink:#18212f; --muted:#5f6b7a; --line:#d8dee8; --bg:#f4f6f8; --panel:#ffffff; --accent:#0f5f7a; }}
+    body {{ margin:0; font-family: Georgia, "Times New Roman", serif; color:var(--ink); background:var(--bg); }}
+    main {{ max-width:940px; margin:0 auto; padding:28px 18px 44px; }}
+    a {{ color:var(--accent); }}
+    .panel {{ background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:18px; margin:14px 0; }}
+    .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; }}
+    .metric strong {{ display:block; font-size:26px; }}
+    .metric span, .muted {{ color:var(--muted); }}
+    code {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }}
+    li {{ margin:7px 0; }}
+  </style>
+</head>
+<body>
+  <main>
+    <p><a href="../index.html">Back to report</a></p>
+    <h1>{title}</h1>
+    <div class="panel grid">
+      <div class="metric"><strong>{score}</strong><span>Score</span></div>
+      <div class="metric"><strong>{label}</strong><span>Label</span></div>
+      <div class="metric"><strong>{asset}</strong><span>Socrata asset type</span></div>
+      <div class="metric"><strong>{modified}</strong><span>Modified</span></div>
+    </div>
+    <div class="panel">
+      <h2>Why It Was Flagged</h2>
+      <ul>{issues}</ul>
+    </div>
+    <div class="panel">
+      <h2>Recommended Fix</h2>
+      <ul>{remediation}</ul>
+    </div>
+    <div class="panel">
+      <h2>Evidence</h2>
+      <p><strong>Dataset id:</strong> <code>{dataset_id}</code></p>
+      <p><strong>Owner:</strong> {owner}</p>
+      <p><strong>Contact:</strong> {contact}</p>
+      <p><strong>Category:</strong> {category}</p>
+      <p><strong>License:</strong> {license}</p>
+      <p><strong>Landing page:</strong> {landing}</p>
+      <p><strong>Machine URL:</strong> {machine}</p>
+      <p class="muted">Run {run_id}, fetched {fetched_at}.</p>
+    </div>
+  </main>
+</body>
+</html>
+""".format(
+        title=escape(row["title"] or row["dataset_id"]),
+        score=row["score"],
+        label=escape(row["label"]),
+        asset=escape(row.get("asset_type") or "dataset"),
+        modified=escape(row.get("modified") or "Missing"),
+        issues=issue_items,
+        remediation=remediation_items,
+        dataset_id=escape(row["dataset_id"]),
+        owner=escape(row.get("publisher") or "Missing"),
+        contact=escape(row.get("contact") or "Missing"),
+        category=escape(row.get("category") or "Missing"),
+        license=escape(row.get("license") or "Missing"),
+        landing=('<a href="%s">%s</a>' % (escape(landing), escape(landing))) if landing else "Missing",
+        machine=('<a href="%s">%s</a>' % (escape(machine), escape(machine))) if machine else "Missing",
+        run_id=summary["run_id"],
+        fetched_at=escape(summary["fetched_at"]),
+    )
+
+
 def escape(value: Any) -> str:
     return html.escape(str(value), quote=True)
-

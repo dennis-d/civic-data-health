@@ -1,191 +1,207 @@
 from __future__ import annotations
 
-import argparse
 import json
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Dict, Optional
-from urllib.parse import urlparse
+from typing import Any, Dict, List
+
+from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
 
 from . import __version__
 from .storage import connect, latest_run_id, report_rows, run_summary
 
-
-TOOLS = [
-    {
-        "name": "get_report_summary",
-        "description": "Summarize the latest Austin civic data health report.",
-        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
-        "annotations": {"readOnlyHint": True},
-    },
-    {
-        "name": "list_high_risk_datasets",
-        "description": "List the highest-risk datasets from the latest report.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20}},
-            "additionalProperties": False,
-        },
-        "annotations": {"readOnlyHint": True},
-    },
-    {
-        "name": "get_dataset_health",
-        "description": "Get score, issue codes, and remediation for one dataset id.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {"dataset_id": {"type": "string"}},
-            "required": ["dataset_id"],
-            "additionalProperties": False,
-        },
-        "annotations": {"readOnlyHint": True},
-    },
-    {
-        "name": "search_datasets",
-        "description": "Search latest report datasets by title, description, id, or issue code.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {"query": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20}},
-            "required": ["query"],
-            "additionalProperties": False,
-        },
-        "annotations": {"readOnlyHint": True},
-    },
-]
+READ_ONLY = ToolAnnotations(
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False,
+)
 
 
-class CivicMcpHandler(BaseHTTPRequestHandler):
-    db_path: Path
+def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
+    mcp = FastMCP(
+        name="civic-data-health",
+        instructions=(
+            "Read-only Austin open data health report. Use these tools to summarize "
+            "dataset health, search report findings, and fetch cited dataset details."
+        ),
+        website_url="https://civic.pagonya.co/",
+        host=host,
+        port=port,
+        streamable_http_path="/mcp",
+        json_response=True,
+        stateless_http=True,
+    )
 
-    def do_GET(self) -> None:
-        path = urlparse(self.path).path
-        if path in ("/health", "/mcp/health"):
-            self.write_json(200, {"ok": True, "service": "civic-data-health-mcp", "version": __version__})
-            return
-        self.write_json(404, {"error": "not_found"})
+    @mcp.custom_route("/mcp/health", methods=["GET"])
+    async def health(_request: Request) -> Response:
+        return JSONResponse({"ok": True, "service": "civic-data-health-mcp", "version": __version__})
 
-    def do_POST(self) -> None:
-        path = urlparse(self.path).path
-        if path.rstrip("/") != "/mcp":
-            self.write_json(404, {"error": "not_found"})
-            return
-        try:
-            body = self.rfile.read(int(self.headers.get("content-length", "0") or "0"))
-            request = json.loads(body.decode("utf-8") or "{}")
-            response = self.handle_rpc(request)
-        except Exception as exc:
-            response = {"jsonrpc": "2.0", "id": None, "error": {"code": -32603, "message": str(exc)}}
-        if response is None:
-            self.send_response(202)
-            self.end_headers()
-            return
-        self.write_json(200, response)
+    @mcp.tool(
+        title="Get Report Summary",
+        description="Use this when you need the latest Austin civic data health summary and top risks.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def get_report_summary() -> Dict[str, Any]:
+        with connect(db_path) as conn:
+            run_id = require_latest_run_id(conn)
+            return {"summary": run_summary(conn, run_id), "top_risks": report_rows(conn, run_id, limit=10)}
 
-    def handle_rpc(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        request_id = request.get("id")
-        method = request.get("method")
-        params = request.get("params") or {}
-        if request_id is None and method and method.startswith("notifications/"):
-            return None
-        if method == "initialize":
-            return self.rpc_result(
-                request_id,
-                {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {"tools": {}},
-                    "serverInfo": {"name": "civic-data-health", "version": __version__},
-                },
-            )
-        if method == "tools/list":
-            return self.rpc_result(request_id, {"tools": TOOLS})
-        if method == "tools/call":
-            name = params.get("name")
-            arguments = params.get("arguments") or {}
-            payload = call_tool(self.db_path, name, arguments)
-            return self.rpc_result(
-                request_id,
-                {
-                    "content": [{"type": "text", "text": json.dumps(payload, indent=2, sort_keys=True)}],
-                    "structuredContent": payload,
-                },
-            )
-        return {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32601, "message": "Unknown method"}}
+    @mcp.tool(
+        title="List High Risk Datasets",
+        description="Use this when you need the highest-risk active datasets from the latest report.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def list_high_risk_datasets(limit: int = 20) -> Dict[str, Any]:
+        safe_limit = clamp_limit(limit)
+        with connect(db_path) as conn:
+            run_id = require_latest_run_id(conn)
+            rows = [row for row in report_rows(conn, run_id, limit=max(safe_limit * 3, safe_limit)) if row["label"] == "high_risk"]
+            return {"run_id": run_id, "datasets": rows[:safe_limit]}
 
-    def rpc_result(self, request_id: Any, result: Dict[str, Any]) -> Dict[str, Any]:
-        return {"jsonrpc": "2.0", "id": request_id, "result": result}
-
-    def write_json(self, status: int, payload: Dict[str, Any]) -> None:
-        encoded = json.dumps(payload, sort_keys=True).encode("utf-8")
-        self.send_response(status)
-        self.send_header("content-type", "application/json")
-        self.send_header("content-length", str(len(encoded)))
-        self.end_headers()
-        self.wfile.write(encoded)
-
-    def log_message(self, format: str, *args: Any) -> None:
-        return
-
-
-def call_tool(db_path: Path, name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
-    with connect(db_path) as conn:
-        run_id = latest_run_id(conn)
-        if run_id is None:
-            return {"error": "no_report_runs", "message": "No generated report exists yet."}
-        if name == "get_report_summary":
-            summary = run_summary(conn, run_id)
-            top = report_rows(conn, run_id, limit=10)
-            return {"summary": summary, "top_risks": top}
-        if name == "list_high_risk_datasets":
-            limit = int(arguments.get("limit") or 20)
-            rows = [row for row in report_rows(conn, run_id, limit=max(limit * 2, limit)) if row["label"] == "high_risk"]
-            return {"run_id": run_id, "datasets": rows[:limit]}
-        if name == "get_dataset_health":
-            dataset_id = str(arguments.get("dataset_id") or "").strip().lower()
-            if not dataset_id:
-                raise ValueError("dataset_id is required")
+    @mcp.tool(
+        title="Get Dataset Health",
+        description="Use this when you have a Socrata dataset id and need its score, issue codes, and remediation.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def get_dataset_health(dataset_id: str) -> Dict[str, Any]:
+        normalized_id = dataset_id.strip().lower()
+        if not normalized_id:
+            raise ValueError("dataset_id is required")
+        with connect(db_path) as conn:
+            run_id = require_latest_run_id(conn)
             for row in report_rows(conn, run_id):
-                if row["dataset_id"] == dataset_id:
+                if row["dataset_id"] == normalized_id:
                     return {"run_id": run_id, "dataset": row}
-            return {"run_id": run_id, "dataset": None, "message": "Dataset id not found in latest run."}
-        if name == "search_datasets":
-            query = str(arguments.get("query") or "").strip().casefold()
-            limit = int(arguments.get("limit") or 20)
-            if not query:
-                raise ValueError("query is required")
-            matches = []
+        return {"run_id": run_id, "dataset": None, "message": "Dataset id not found in latest run."}
+
+    @mcp.tool(
+        title="Search Datasets",
+        description="Use this when you need to search Austin report rows by title, description, id, asset type, or issue code.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def search_datasets(query: str, limit: int = 20) -> Dict[str, Any]:
+        return {"run_id": _latest_run_id(db_path), "query": query, "datasets": search_report(db_path, query, clamp_limit(limit))}
+
+    @mcp.tool(
+        name="search",
+        title="Search Civic Data Health",
+        description="Use this when ChatGPT needs citation-friendly search results from the civic data health report.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def search(query: str) -> Dict[str, Any]:
+        rows = search_report(db_path, query, 10)
+        return {
+            "results": [
+                {
+                    "id": row["dataset_id"],
+                    "title": row["title"] or row["dataset_id"],
+                    "url": dataset_url(row),
+                }
+                for row in rows
+            ]
+        }
+
+    @mcp.tool(
+        name="fetch",
+        title="Fetch Civic Data Health Record",
+        description="Use this when ChatGPT needs the full citation-friendly text for one dataset health record.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def fetch(id: str) -> Dict[str, Any]:
+        normalized_id = id.strip().lower()
+        if not normalized_id:
+            raise ValueError("id is required")
+        with connect(db_path) as conn:
+            run_id = require_latest_run_id(conn)
             for row in report_rows(conn, run_id):
-                haystack = " ".join(
-                    [
-                        row["dataset_id"],
-                        row["title"],
-                        row["description"],
-                        " ".join(row["issue_codes"]),
-                    ]
-                ).casefold()
-                if query in haystack:
-                    matches.append(row)
-                if len(matches) >= limit:
-                    break
-            return {"run_id": run_id, "query": query, "datasets": matches}
-    raise ValueError("Unknown tool: %s" % name)
+                if row["dataset_id"] == normalized_id:
+                    return {
+                        "id": row["dataset_id"],
+                        "title": row["title"] or row["dataset_id"],
+                        "text": dataset_text(row),
+                        "url": dataset_url(row),
+                        "metadata": {
+                            "score": str(row["score"]),
+                            "label": row["label"],
+                            "asset_type": row.get("asset_type") or "",
+                            "run_id": str(run_id),
+                        },
+                    }
+        raise ValueError("Dataset id not found in latest run: %s" % normalized_id)
+
+    return mcp
 
 
 def serve(db_path: Path, host: str, port: int) -> None:
-    CivicMcpHandler.db_path = db_path
-    server = ThreadingHTTPServer((host, port), CivicMcpHandler)
-    print("civic-data-health MCP serving on %s:%s using %s" % (host, port, db_path), flush=True)
-    server.serve_forever()
+    create_mcp(db_path, host, port).run(transport="streamable-http")
 
 
-def main(argv=None) -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--db", type=Path, required=True)
-    parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8787)
-    args = parser.parse_args(argv)
-    serve(args.db, args.host, args.port)
-    return 0
+def require_latest_run_id(conn) -> int:
+    run_id = latest_run_id(conn)
+    if run_id is None:
+        raise ValueError("No generated report exists yet.")
+    return run_id
 
 
-if __name__ == "__main__":
-    raise SystemExit(main())
+def _latest_run_id(db_path: Path) -> int:
+    with connect(db_path) as conn:
+        return require_latest_run_id(conn)
+
+
+def search_report(db_path: Path, query: str, limit: int) -> List[Dict[str, Any]]:
+    normalized_query = query.strip().casefold()
+    if not normalized_query:
+        raise ValueError("query is required")
+    with connect(db_path) as conn:
+        run_id = require_latest_run_id(conn)
+        matches = []
+        for row in report_rows(conn, run_id):
+            haystack = " ".join(
+                [
+                    row["dataset_id"],
+                    row["title"],
+                    row["description"],
+                    row.get("asset_type") or "",
+                    " ".join(row["issue_codes"]),
+                ]
+            ).casefold()
+            if normalized_query in haystack:
+                matches.append(row)
+            if len(matches) >= limit:
+                break
+    return matches
+
+
+def dataset_url(row: Dict[str, Any]) -> str:
+    return row.get("landing_url") or "https://data.austintexas.gov/d/%s" % row["dataset_id"]
+
+
+def dataset_text(row: Dict[str, Any]) -> str:
+    details = {
+        "dataset_id": row["dataset_id"],
+        "title": row["title"],
+        "score": row["score"],
+        "label": row["label"],
+        "asset_type": row.get("asset_type") or "",
+        "modified": row.get("modified") or "",
+        "publisher": row.get("publisher") or "",
+        "contact": row.get("contact") or "",
+        "issue_codes": row["issue_codes"],
+        "remediation": row["remediation"],
+        "landing_url": dataset_url(row),
+    }
+    return json.dumps(details, indent=2, sort_keys=True)
+
+
+def clamp_limit(limit: int) -> int:
+    return max(1, min(int(limit or 20), 100))
 
