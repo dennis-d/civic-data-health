@@ -94,6 +94,29 @@ def init_db(db_path: Path) -> None:
             );
             """
         )
+        migrate_existing_schema(conn)
+
+
+def migrate_existing_schema(conn: sqlite3.Connection) -> None:
+    """Keep early demo databases usable after the packaged app is deployed."""
+    ensure_column(conn, "runs", "raw_path", "TEXT NOT NULL DEFAULT ''")
+    ensure_column(conn, "runs", "manifest_path", "TEXT NOT NULL DEFAULT ''")
+    ensure_column(conn, "runs", "raw_bytes", "INTEGER NOT NULL DEFAULT 0")
+    ensure_column(conn, "runs", "total_records", "INTEGER NOT NULL DEFAULT 0")
+    ensure_column(conn, "runs", "normalized_count", "INTEGER NOT NULL DEFAULT 0")
+    ensure_column(conn, "runs", "skipped_count", "INTEGER NOT NULL DEFAULT 0")
+    ensure_column(conn, "runs", "errored_count", "INTEGER NOT NULL DEFAULT 0")
+    ensure_column(conn, "runs", "limit_applied", "INTEGER")
+    ensure_column(conn, "runs", "tool_version", "TEXT NOT NULL DEFAULT 'pre-repo'")
+    ensure_column(conn, "dataset_health", "issue_codes_json", "TEXT NOT NULL DEFAULT '[]'")
+    ensure_column(conn, "dataset_health", "freshness_confidence", "TEXT NOT NULL DEFAULT 'unknown'")
+    ensure_column(conn, "dataset_health", "data_dictionary_quality_json", "TEXT NOT NULL DEFAULT '{}'")
+
+
+def ensure_column(conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(%s)" % table).fetchall()}
+    if column not in columns:
+        conn.execute("ALTER TABLE %s ADD COLUMN %s %s" % (table, column, definition))
 
 
 def latest_run(conn: sqlite3.Connection) -> Optional[sqlite3.Row]:
@@ -104,7 +127,14 @@ def latest_run_for_sha(conn: sqlite3.Connection, catalog_sha256: str, limit_appl
     if limit_applied:
         return None
     return conn.execute(
-        "SELECT * FROM runs WHERE catalog_sha256 = ? AND limit_applied IS NULL ORDER BY fetched_at DESC, id DESC LIMIT 1",
+        """
+        SELECT * FROM runs
+        WHERE catalog_sha256 = ?
+          AND limit_applied IS NULL
+          AND normalized_count > 0
+        ORDER BY fetched_at DESC, id DESC
+        LIMIT 1
+        """,
         (catalog_sha256,),
     ).fetchone()
 
@@ -307,4 +337,3 @@ def _decode_row(row: sqlite3.Row) -> Dict[str, Any]:
     item["remediation"] = json.loads(item.pop("remediation_json"))
     item["data_dictionary_quality"] = json.loads(item.pop("data_dictionary_quality_json"))
     return item
-
