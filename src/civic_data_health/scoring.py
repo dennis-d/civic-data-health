@@ -44,6 +44,8 @@ STANDALONE_EVENT_TERMS = {
     "winter storm",
 }
 
+MONTH_PATTERN = r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+
 
 def score_dataset(dataset: NormalizedDataset, now: Optional[datetime] = None, columns_checked: bool = False) -> HealthResult:
     now = now or datetime.now(timezone.utc)
@@ -215,7 +217,20 @@ def is_point_in_time_record(dataset: NormalizedDataset) -> bool:
     if any(term in text for term in STANDALONE_EVENT_TERMS):
         return True
     has_year = re.search(r"\b(?:19|20)\d{2}(?:\s*[-/]\s*(?:19|20)?\d{2})?\b|\bfy\s*(?:19|20)\d{2}\b", text)
+    if has_year and is_month_or_quarter_snapshot(text):
+        return True
     return bool(has_year and any(term in text for term in POINT_IN_TIME_TERMS))
+
+
+def is_month_or_quarter_snapshot(text: str) -> bool:
+    year = r"(?:19|20)\d{2}"
+    if re.search(rf"\b{MONTH_PATTERN}\b\s+{year}\b", text):
+        return True
+    if re.search(rf"\b{year}\b\s*\(\s*{MONTH_PATTERN}\s*[-/]\s*{MONTH_PATTERN}\s*\)", text):
+        return True
+    if re.search(rf"\b(?:q[1-4]\s+{year}|{year}\s+q[1-4])\b", text):
+        return True
+    return False
 
 
 def reference_asset_issue_code(dataset: NormalizedDataset) -> Optional[str]:

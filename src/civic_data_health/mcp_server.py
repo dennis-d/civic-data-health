@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
@@ -265,29 +266,35 @@ def _latest_run_id(db_path: Path) -> int:
 
 
 def search_report(db_path: Path, query: str, limit: int) -> List[Dict[str, Any]]:
-    normalized_query = query.strip().casefold()
+    normalized_query = normalize_search_text(query)
     if not normalized_query:
         raise ValueError("query is required")
     with connect(db_path) as conn:
         run_id = require_latest_run_id(conn)
         matches = []
         for row in report_rows(conn, run_id):
-            haystack = " ".join(
-                [
-                    row["dataset_id"],
-                    row["title"],
-                    row["description"],
-                    row.get("asset_type") or "",
-                    asset_group(row),
-                    asset_group_label(asset_group(row)),
-                    " ".join(row["issue_codes"]),
-                ]
-            ).casefold()
+            haystack = normalize_search_text(
+                " ".join(
+                    [
+                        row["dataset_id"],
+                        row["title"],
+                        row["description"],
+                        row.get("asset_type") or "",
+                        asset_group(row),
+                        asset_group_label(asset_group(row)),
+                        " ".join(row["issue_codes"]),
+                    ]
+                )
+            )
             if normalized_query in haystack:
                 matches.append(row)
             if len(matches) >= limit:
                 break
     return matches
+
+
+def normalize_search_text(value: str) -> str:
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", value.casefold()).split())
 
 
 def find_dataset(rows: List[Dict[str, Any]], dataset_id: str) -> Optional[Dict[str, Any]]:

@@ -88,6 +88,22 @@ class ScoringTests(unittest.TestCase):
         self.assertIn("point_in_time_or_event_record", result.issue_codes)
         self.assertEqual(result.label, "needs_review")
 
+    def test_month_range_snapshot_is_not_treated_as_stale_active_dataset(self):
+        result = score_dataset(
+            dataset(
+                title="CapMetro GTFS - January 2018 (Apr-Jun)",
+                description="",
+                modified="2018-06-30",
+                accrual_periodicity="",
+                license="",
+            ),
+            now=datetime(2026, 5, 9, tzinfo=timezone.utc),
+        )
+        self.assertIn("point_in_time_or_event_record", result.issue_codes)
+        self.assertNotIn("freshness_old_unknown_cadence", result.issue_codes)
+        self.assertEqual(result.freshness_confidence, "not_applicable")
+        self.assertEqual(result.label, "needs_review")
+
     def test_socrata_story_page_is_not_forced_high_risk(self):
         result = score_dataset(
             dataset(
