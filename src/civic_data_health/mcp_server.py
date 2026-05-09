@@ -22,7 +22,7 @@ from .analysis import (
 )
 from .storage import connect, latest_run_id, report_rows, run_summary
 
-AssetGroupArg = Literal["active_dataset", "measure", "story_reference", "all"]
+AssetGroupArg = Literal["active_dataset", "needs_manual_review", "archive_snapshot", "event_specific", "measure", "story_reference", "all"]
 LabelArg = Literal["high_risk", "needs_review", "good", "all"]
 
 READ_ONLY = ToolAnnotations(
@@ -62,11 +62,13 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
         with connect(db_path) as conn:
             run_id = require_latest_run_id(conn)
             rows = report_rows(conn, run_id)
+            groups = summarize_asset_groups(rows)
             return {
                 "summary": run_summary(conn, run_id),
-                "asset_groups": summarize_asset_groups(rows),
+                "classification_groups": groups,
+                "asset_groups": groups,
                 "top_actionable_fixes": top_actionable_fixes(rows, limit=10, group="active_dataset"),
-                "top_risks": [row for row in rows if row["label"] == "high_risk"][:10],
+                "top_risks": [row for row in rows if row["label"] == "high_risk" and asset_group(row) == "active_dataset"][:10],
             }
 
     @mcp.tool(
@@ -102,7 +104,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Compare Asset Types",
-        description="Use this when you need to compare active datasets, Socrata measures, and story/reference assets.",
+        description="Use this when you need to compare active datasets, archives, event records, Socrata measures, and story/reference assets.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -110,7 +112,52 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
         with connect(db_path) as conn:
             run_id = require_latest_run_id(conn)
             rows = report_rows(conn, run_id)
-            return {"run_id": run_id, "asset_groups": summarize_asset_groups(rows)}
+            groups = summarize_asset_groups(rows)
+            return {"run_id": run_id, "classification_groups": groups, "asset_groups": groups}
+
+    @mcp.tool(
+        title="List Classification Review Candidates",
+        description="Use this when you need records that require human classification before they are treated as active risks.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def list_classification_review_candidates(limit: int = 25) -> Dict[str, Any]:
+        safe_limit = clamp_limit(limit)
+        with connect(db_path) as conn:
+            run_id = require_latest_run_id(conn)
+            rows = filter_by_asset_group(report_rows(conn, run_id), "needs_manual_review")
+            return {"run_id": run_id, "datasets": rows[:safe_limit]}
+
+    @mcp.tool(
+        title="Get Classification Methodology",
+        description="Use this when you need to explain how the report classifies active datasets, archives, events, measures, and story assets.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def get_classification_methodology() -> Dict[str, Any]:
+        return {
+            "groups": {
+                "active_dataset": "Ongoing machine-readable data or records with clear active-dataset evidence.",
+                "needs_manual_review": "Dated records without enough cadence or asset evidence for automatic classification.",
+                "archive_snapshot": "Month, quarter, year, or bounded-year snapshots.",
+                "event_specific": "Records tied to a specific incident or event.",
+                "measure": "Socrata measure or indicator assets.",
+                "story_reference": "Socrata stories, files, links, and other reference assets.",
+            },
+            "evidence_codes": {
+                "known_cadence": "accrualPeriodicity is present.",
+                "machine_readable_distribution": "A distribution exposes downloadURL or accessURL.",
+                "socrata_story_asset": "Socrata view metadata identifies a story page.",
+                "socrata_measure_asset": "Socrata view metadata identifies a measure asset.",
+                "socrata_reference_asset": "Socrata view metadata identifies another non-table reference asset.",
+                "month_quarter_snapshot": "Title or description names a dated month, quarter, or month range.",
+                "bounded_year_range": "Title or description names a single year or bounded year range with snapshot/statistics language.",
+                "event_keyword": "Title or description names an incident such as a flood, storm, hurricane, or pandemic.",
+                "manual_override": "classification_overrides.json supplied a human-reviewed classification.",
+            },
+            "hard_override": "Active-like records with no distribution or no downloadURL/accessURL are labelled high_risk.",
+            "methodology_url": "https://civic.pagonya.co/methodology.html",
+        }
 
     @mcp.tool(
         title="List Datasets By Asset Group",
@@ -241,6 +288,8 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
                             "score": str(row["score"]),
                             "label": row["label"],
                             "asset_type": row.get("asset_type") or "",
+                            "classification_group": str((row.get("classification") or {}).get("group") or ""),
+                            "classification_confidence": str((row.get("classification") or {}).get("confidence") or ""),
                             "run_id": str(run_id),
                         },
                     }
@@ -280,6 +329,9 @@ def search_report(db_path: Path, query: str, limit: int) -> List[Dict[str, Any]]
                         row["title"],
                         row["description"],
                         row.get("asset_type") or "",
+                        str((row.get("classification") or {}).get("group") or ""),
+                        str((row.get("classification") or {}).get("reason") or ""),
+                        " ".join((row.get("classification") or {}).get("evidence") or []),
                         asset_group(row),
                         asset_group_label(asset_group(row)),
                         " ".join(row["issue_codes"]),
@@ -317,6 +369,7 @@ def dataset_text(row: Dict[str, Any]) -> str:
         "asset_type": row.get("asset_type") or "",
         "asset_group": asset_group(row),
         "asset_group_label": asset_group_label(asset_group(row)),
+        "classification": row.get("classification") or {},
         "modified": row.get("modified") or "",
         "publisher": row.get("publisher") or "",
         "contact": row.get("contact") or "",

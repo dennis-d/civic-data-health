@@ -66,6 +66,8 @@ class ScoringTests(unittest.TestCase):
             now=datetime(2026, 5, 9, tzinfo=timezone.utc),
         )
         self.assertIn("point_in_time_or_event_record", result.issue_codes)
+        self.assertEqual(result.classification["group"], "event_specific")
+        self.assertIn("event_keyword", result.classification["evidence"])
         self.assertNotIn("freshness_old_unknown_cadence", result.issue_codes)
         self.assertEqual(result.freshness_confidence, "not_applicable")
         self.assertEqual(result.label, "needs_review")
@@ -86,6 +88,7 @@ class ScoringTests(unittest.TestCase):
             now=datetime(2026, 5, 9, tzinfo=timezone.utc),
         )
         self.assertIn("point_in_time_or_event_record", result.issue_codes)
+        self.assertEqual(result.classification["group"], "event_specific")
         self.assertEqual(result.label, "needs_review")
 
     def test_month_range_snapshot_is_not_treated_as_stale_active_dataset(self):
@@ -100,6 +103,8 @@ class ScoringTests(unittest.TestCase):
             now=datetime(2026, 5, 9, tzinfo=timezone.utc),
         )
         self.assertIn("point_in_time_or_event_record", result.issue_codes)
+        self.assertEqual(result.classification["group"], "archive_snapshot")
+        self.assertIn("month_quarter_snapshot", result.classification["evidence"])
         self.assertNotIn("freshness_old_unknown_cadence", result.issue_codes)
         self.assertEqual(result.freshness_confidence, "not_applicable")
         self.assertEqual(result.label, "needs_review")
@@ -116,6 +121,8 @@ class ScoringTests(unittest.TestCase):
             now=datetime(2026, 5, 9, tzinfo=timezone.utc),
         )
         self.assertIn("point_in_time_or_event_record", result.issue_codes)
+        self.assertEqual(result.classification["group"], "archive_snapshot")
+        self.assertIn("bounded_year_range", result.classification["evidence"])
         self.assertNotIn("freshness_old_unknown_cadence", result.issue_codes)
         self.assertEqual(result.freshness_confidence, "not_applicable")
         self.assertEqual(result.label, "needs_review")
@@ -137,6 +144,8 @@ class ScoringTests(unittest.TestCase):
             now=datetime(2026, 5, 9, tzinfo=timezone.utc),
         )
         self.assertIn("socrata_story_page", result.issue_codes)
+        self.assertEqual(result.classification["group"], "story_reference")
+        self.assertIn("socrata_story_asset", result.classification["evidence"])
         self.assertNotIn("freshness_old_unknown_cadence", result.issue_codes)
         self.assertEqual(result.label, "needs_review")
 
@@ -155,6 +164,8 @@ class ScoringTests(unittest.TestCase):
             now=datetime(2026, 5, 9, tzinfo=timezone.utc),
         )
         self.assertIn("socrata_measure_asset", result.issue_codes)
+        self.assertEqual(result.classification["group"], "measure")
+        self.assertIn("socrata_measure_asset", result.classification["evidence"])
         self.assertIn("no_distribution", result.issue_codes)
         self.assertEqual(result.freshness_confidence, "not_applicable")
         self.assertEqual(result.label, "needs_review")

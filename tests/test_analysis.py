@@ -27,7 +27,8 @@ class AnalysisTests(unittest.TestCase):
         self.assertEqual(asset_group(row(asset_type="")), "active_dataset")
         self.assertEqual(asset_group(row(asset_type="measure")), "measure")
         self.assertEqual(asset_group(row(asset_type="story")), "story_reference")
-        self.assertEqual(asset_group(row(asset_type="", issue_codes=["point_in_time_or_event_record"])), "story_reference")
+        self.assertEqual(asset_group(row(asset_type="", issue_codes=["point_in_time_or_event_record"])), "archive_snapshot")
+        self.assertEqual(asset_group(row(classification={"group": "needs_manual_review"})), "needs_manual_review")
 
     def test_top_actionable_fixes_defaults_to_active_datasets(self):
         fixes = top_actionable_fixes(
@@ -50,6 +51,7 @@ class AnalysisTests(unittest.TestCase):
         self.assertEqual(summary["active_dataset"]["count"], 1)
         self.assertEqual(summary["measure"]["labels"]["good"], 1)
         self.assertEqual(summary["story_reference"]["top_issues"][0]["issue_code"], "license_missing")
+        self.assertIn("needs_manual_review", summary)
 
     def test_department_email_is_draft_only(self):
         draft = draft_department_email(row(), contact_name="Data Steward", sender_name="Civic Reviewer")

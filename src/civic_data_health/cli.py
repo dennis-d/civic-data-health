@@ -42,6 +42,7 @@ def add_pipeline_args(parser: argparse.ArgumentParser, include_out: bool = True)
     parser.add_argument("--source-url", default=DEFAULT_SOURCE_URL)
     parser.add_argument("--limit", type=int)
     parser.add_argument("--force", action="store_true")
+    parser.add_argument("--classification-overrides", type=Path, default=Path("classification_overrides.json"))
 
 
 def main(argv=None) -> int:
@@ -56,6 +57,7 @@ def main(argv=None) -> int:
             source_url=args.source_url,
             limit=args.limit,
             force=args.force,
+            classification_overrides_path=args.classification_overrides,
         )
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
@@ -68,6 +70,7 @@ def main(argv=None) -> int:
             source_url=args.source_url,
             limit=args.limit,
             force=args.force,
+            classification_overrides_path=args.classification_overrides,
         )
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
@@ -96,4 +99,3 @@ def main(argv=None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

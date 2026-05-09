@@ -1,0 +1,41 @@
+{
+  "name": "civic-data-health",
+  "version": "0.2.0",
+  "description": "Codex workflow and MCP endpoint for the Civic Data Health Austin open data audit.",
+  "author": {
+    "name": "Dennis D",
+    "url": "https://github.com/dennis-d"
+  },
+  "homepage": "https://civic.pagonya.co/",
+  "repository": "https://github.com/dennis-d/civic-data-health",
+  "license": "MIT",
+  "keywords": [
+    "civic-data",
+    "open-data",
+    "mcp",
+    "austin"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Civic Data Health",
+    "shortDescription": "Inspect Austin open data quality through the hosted MCP report.",
+    "longDescription": "Adds Codex guidance and MCP configuration for the Civic Data Health Austin Open Data metadata audit, including dataset search, classification review, methodology, and cleanup prioritization tools.",
+    "developerName": "Dennis D",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Search",
+      "Analysis"
+    ],
+    "websiteURL": "https://civic.pagonya.co/",
+    "privacyPolicyURL": "https://civic.pagonya.co/methodology.html",
+    "termsOfServiceURL": "https://civic.pagonya.co/methodology.html",
+    "defaultPrompt": [
+      "Summarize Austin open data health.",
+      "List active high-risk datasets.",
+      "Find records needing classification review."
+    ],
+    "brandColor": "#0F5F7A"
+  }
+}

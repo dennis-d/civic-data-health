@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "civic-data-health": {
+      "url": "https://civic.pagonya.co/mcp"
+    }
+  }
+}

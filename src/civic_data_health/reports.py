@@ -11,7 +11,7 @@ from .analysis import asset_group, asset_group_label, summarize_asset_groups, to
 from .storage import connect, latest_run_id, report_rows, run_summary, skipped_rows
 
 FOOTER = "Independent analysis using public City of Austin open data. Not affiliated with or endorsed by the City of Austin."
-SECTION_ORDER = ("active_dataset", "measure", "story_reference")
+SECTION_ORDER = ("active_dataset", "needs_manual_review", "archive_snapshot", "event_specific", "measure", "story_reference")
 
 
 def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[int] = None) -> Dict[str, str]:
@@ -30,12 +30,15 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
     csv_path = out_dir / "austin_dataset_health.csv"
     html_path = out_dir / "austin_dataset_health.html"
     index_path = out_dir / "index.html"
+    methodology_path = out_dir / "methodology.html"
     detail_dir = out_dir / "datasets"
+    group_summary = summarize_asset_groups(rows)
 
     payload = {
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "summary": summary,
-        "asset_groups": summarize_asset_groups(rows),
+        "classification_groups": group_summary,
+        "asset_groups": group_summary,
         "skipped_records": skipped,
         "datasets": rows,
     }
@@ -45,12 +48,14 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
     html_text = render_html(summary, rows, skipped)
     html_path.write_text(html_text, encoding="utf-8")
     index_path.write_text(html_text, encoding="utf-8")
+    methodology_path.write_text(render_methodology_page(summary), encoding="utf-8")
 
     return {
         "json": str(json_path),
         "csv": str(csv_path),
         "html": str(html_path),
         "index": str(index_path),
+        "methodology": str(methodology_path),
         "details": str(detail_dir),
     }
 
@@ -70,6 +75,10 @@ def write_csv(path: Path, rows) -> None:
         "landing_url",
         "machine_url",
         "asset_type",
+        "classification_group",
+        "classification_confidence",
+        "classification_evidence",
+        "classification_reason",
         "remediation",
     ]
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -91,6 +100,10 @@ def write_csv(path: Path, rows) -> None:
                     "landing_url": row["landing_url"],
                     "machine_url": row["machine_url"],
                     "asset_type": row.get("asset_type") or "",
+                    "classification_group": (row.get("classification") or {}).get("group", ""),
+                    "classification_confidence": (row.get("classification") or {}).get("confidence", ""),
+                    "classification_evidence": ";".join((row.get("classification") or {}).get("evidence", [])),
+                    "classification_reason": (row.get("classification") or {}).get("reason", ""),
                     "remediation": " ".join(row["remediation"]),
                 }
             )
@@ -98,6 +111,7 @@ def write_csv(path: Path, rows) -> None:
 
 def render_html(summary: Dict[str, Any], rows, skipped) -> str:
     group_summary = summarize_asset_groups(rows)
+    active_summary = group_summary["active_dataset"]
     actionable = top_actionable_fixes(rows, limit=25, group="active_dataset")
     skipped_markup = "".join(
         "<li>#{idx}: {title} ({identifier}) - {reason}</li>".format(
@@ -158,7 +172,7 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
   <header>
     <main>
       <h1>Civic Data Health</h1>
-      <p>Austin Open Data metadata audit generated from the public DCAT catalog. Socrata story, measure, and reference assets are separated from active dataset risk.</p>
+      <p>Austin Open Data metadata audit generated from the public DCAT catalog. Active datasets, archives, event records, measures, and story assets are classified before risk ranking.</p>
       <div class="summary">
         <div class="metric"><strong>{analyzed}</strong><span>Analyzed of {total} catalog records</span></div>
         <div class="metric"><strong>{high_risk}</strong><span>High-risk active datasets</span></div>
@@ -170,9 +184,13 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
       <div class="actions">
         <a href="austin_dataset_health.csv">Download CSV</a>
         <a href="austin_dataset_health.json">Download JSON</a>
+        <a href="methodology.html">Methodology</a>
       </div>
       <nav class="tabs" aria-label="Report sections">
         <a href="#active_dataset">Active datasets</a>
+        <a href="#needs_manual_review">Needs classification review</a>
+        <a href="#archive_snapshot">Archive snapshots</a>
+        <a href="#event_specific">Event records</a>
         <a href="#measure">Measures and indicators</a>
         <a href="#story_reference">Stories and reference</a>
         <a href="#actionable">Top fix opportunities</a>
@@ -181,7 +199,7 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
   </header>
   <main>
     <h2>Catalog Sections</h2>
-    <p class="section-note">Active datasets are ranked separately from Socrata measures, story pages, and reference assets so one-time events and indicators do not distort the operational risk queue.</p>
+    <p class="section-note">Active datasets are ranked separately from archives, one-time events, Socrata measures, story pages, and ambiguous dated records so the operational risk queue stays credible.</p>
     <div class="group-summary">
       {group_metrics}
     </div>
@@ -204,7 +222,7 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
 """.format(
         analyzed=summary["analyzed_records"],
         total=summary["total_records"],
-        high_risk=summary["labels"]["high_risk"],
+        high_risk=active_summary["labels"]["high_risk"],
         needs_review=summary["labels"]["needs_review"],
         good=summary["labels"]["good"],
         skipped=summary["skipped_records"],
@@ -244,7 +262,7 @@ def render_asset_section(group: str, rows, summary: Dict[str, Any]) -> str:
   <h2>{label}</h2>
   <p class="section-note">{count} records. Showing top {shown} by label, score, and title. Frequent issues: {issues}.</p>
   <table>
-    <thead><tr><th>Dataset</th><th>Score</th><th>Label</th><th>Asset</th><th>Modified</th><th>Owner</th><th>Issues</th><th>Remediation</th></tr></thead>
+    <thead><tr><th>Dataset</th><th>Score</th><th>Label</th><th>Classification</th><th>Modified</th><th>Owner</th><th>Issues</th><th>Remediation</th></tr></thead>
     <tbody>
       {rows}
     </tbody>
@@ -284,6 +302,11 @@ def render_actionable_row(item: Dict[str, Any]) -> str:
 def render_dataset_row(row: Dict[str, Any]) -> str:
     remediation = " ".join(row["remediation"])
     owner = row["publisher"] or row["contact"] or "Missing"
+    classification = row.get("classification") or {}
+    evidence = ", ".join(classification.get("evidence") or [])
+    classification_text = "%s (%s)" % (asset_group_label(asset_group(row)), classification.get("confidence") or "unknown")
+    if evidence:
+        classification_text += " - %s" % evidence
     title = escape(row["title"] or row["dataset_id"])
     detail_href = "datasets/%s.html" % escape(row["dataset_id"])
     title = '<a href="{url}">{title}</a>'.format(url=detail_href, title=title)
@@ -291,7 +314,7 @@ def render_dataset_row(row: Dict[str, Any]) -> str:
   <td data-label="Dataset" class="title">{title}<div class="issues">{dataset_id}</div></td>
   <td data-label="Score">{score}</td>
   <td data-label="Label" class="label {label}">{label}</td>
-  <td data-label="Asset">{asset_type}</td>
+  <td data-label="Classification">{classification}</td>
   <td data-label="Modified">{modified}</td>
   <td data-label="Owner">{owner}</td>
   <td data-label="Issues" class="issues">{issues}</td>
@@ -301,7 +324,7 @@ def render_dataset_row(row: Dict[str, Any]) -> str:
         dataset_id=escape(row["dataset_id"]),
         score=row["score"],
         label=escape(row["label"]),
-        asset_type=escape(row.get("asset_type") or "dataset"),
+        classification=escape(classification_text),
         modified=escape(row["modified"] or "Missing"),
         owner=escape(owner),
         issues=escape(", ".join(row["issue_codes"])),
@@ -319,6 +342,8 @@ def write_detail_pages(detail_dir: Path, summary: Dict[str, Any], rows) -> None:
 def render_detail_page(summary: Dict[str, Any], row: Dict[str, Any]) -> str:
     issue_items = "".join("<li>%s</li>" % escape(issue) for issue in row["issue_codes"])
     remediation_items = "".join("<li>%s</li>" % escape(item) for item in row["remediation"])
+    classification = row.get("classification") or {}
+    classification_evidence = ", ".join(classification.get("evidence") or []) or "No stored evidence"
     landing = row.get("landing_url") or ""
     machine = row.get("machine_url") or ""
     return """<!doctype html>
@@ -347,6 +372,7 @@ def render_detail_page(summary: Dict[str, Any], row: Dict[str, Any]) -> str:
     <div class="panel grid">
       <div class="metric"><strong>{score}</strong><span>Score</span></div>
       <div class="metric"><strong>{label}</strong><span>Label</span></div>
+      <div class="metric"><strong>{classification_group}</strong><span>Classification</span></div>
       <div class="metric"><strong>{asset}</strong><span>Socrata asset type</span></div>
       <div class="metric"><strong>{modified}</strong><span>Modified</span></div>
     </div>
@@ -361,6 +387,9 @@ def render_detail_page(summary: Dict[str, Any], row: Dict[str, Any]) -> str:
     <div class="panel">
       <h2>Evidence</h2>
       <p><strong>Dataset id:</strong> <code>{dataset_id}</code></p>
+      <p><strong>Classification confidence:</strong> {classification_confidence}</p>
+      <p><strong>Classification evidence:</strong> <code>{classification_evidence}</code></p>
+      <p><strong>Classification reason:</strong> {classification_reason}</p>
       <p><strong>Owner:</strong> {owner}</p>
       <p><strong>Contact:</strong> {contact}</p>
       <p><strong>Category:</strong> {category}</p>
@@ -376,11 +405,15 @@ def render_detail_page(summary: Dict[str, Any], row: Dict[str, Any]) -> str:
         title=escape(row["title"] or row["dataset_id"]),
         score=row["score"],
         label=escape(row["label"]),
+        classification_group=escape(asset_group_label(asset_group(row))),
         asset=escape(row.get("asset_type") or "dataset"),
         modified=escape(row.get("modified") or "Missing"),
         issues=issue_items,
         remediation=remediation_items,
         dataset_id=escape(row["dataset_id"]),
+        classification_confidence=escape(classification.get("confidence") or "unknown"),
+        classification_evidence=escape(classification_evidence),
+        classification_reason=escape(classification.get("reason") or ""),
         owner=escape(row.get("publisher") or "Missing"),
         contact=escape(row.get("contact") or "Missing"),
         category=escape(row.get("category") or "Missing"),
@@ -389,6 +422,72 @@ def render_detail_page(summary: Dict[str, Any], row: Dict[str, Any]) -> str:
         machine=('<a href="%s">%s</a>' % (escape(machine), escape(machine))) if machine else "Missing",
         run_id=summary["run_id"],
         fetched_at=escape(summary["fetched_at"]),
+    )
+
+
+def render_methodology_page(summary: Dict[str, Any]) -> str:
+    return """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Methodology - Civic Data Health</title>
+  <style>
+    :root {{ color-scheme: light; --ink:#18212f; --muted:#5f6b7a; --line:#d8dee8; --bg:#f4f6f8; --panel:#ffffff; --accent:#0f5f7a; }}
+    body {{ margin:0; font-family: Georgia, "Times New Roman", serif; color:var(--ink); background:var(--bg); }}
+    main {{ max-width:940px; margin:0 auto; padding:28px 18px 44px; }}
+    a {{ color:var(--accent); }}
+    .panel {{ background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:18px; margin:14px 0; }}
+    .muted {{ color:var(--muted); }}
+    code {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }}
+    li {{ margin:7px 0; }}
+  </style>
+</head>
+<body>
+  <main>
+    <p><a href="index.html">Back to report</a></p>
+    <h1>Methodology</h1>
+    <div class="panel">
+      <h2>Classification First</h2>
+      <p>Each catalog record is classified before risk ranking. Active datasets are the only records promoted into the operational high-risk queue. Archives, event-specific records, Socrata measures, and story/reference assets remain visible but do not receive active freshness expectations.</p>
+      <ul>
+        <li><code>active_dataset</code>: ongoing machine-readable data or records with clear cadence evidence.</li>
+        <li><code>needs_manual_review</code>: dated records without enough cadence or asset evidence for automatic classification.</li>
+        <li><code>archive_snapshot</code>: month, quarter, year, or bounded-year snapshots.</li>
+        <li><code>event_specific</code>: records tied to a specific incident or event.</li>
+        <li><code>measure</code>: Socrata measure or indicator assets.</li>
+        <li><code>story_reference</code>: Socrata stories, files, links, and other reference assets.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h2>Evidence Codes</h2>
+      <p>Classification evidence is stored on every row and exported to JSON, CSV, detail pages, and MCP tools.</p>
+      <ul>
+        <li><code>known_cadence</code>: <code>accrualPeriodicity</code> is present.</li>
+        <li><code>machine_readable_distribution</code>: a distribution exposes <code>downloadURL</code> or <code>accessURL</code>.</li>
+        <li><code>socrata_story_asset</code>, <code>socrata_measure_asset</code>, <code>socrata_reference_asset</code>: Socrata view metadata identifies a non-table asset.</li>
+        <li><code>month_quarter_snapshot</code>: title or description names a dated month, quarter, or month range.</li>
+        <li><code>bounded_year_range</code>: title or description names a single year or bounded year range with snapshot/statistics language.</li>
+        <li><code>event_keyword</code>: title or description names an incident such as a flood, storm, hurricane, or pandemic.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h2>Scoring</h2>
+      <p>Scores start at 100. Missing modified dates, weak descriptions, missing owner/contact metadata, and missing license/category/tags reduce the score. Known-cadence datasets get a full stale penalty when modified dates are past 1.5x the expected period. Unknown-cadence active records get only a low-confidence freshness issue.</p>
+      <p>Active-like records without a distribution or machine-readable URL are hard-labelled high risk. Archive, event, measure, and reference records keep those issues visible but are not promoted into the active high-risk queue.</p>
+    </div>
+    <div class="panel">
+      <h2>Manual Overrides</h2>
+      <p>Manual corrections live in <code>classification_overrides.json</code>. Each override must name a Socrata dataset id and one allowed classification group. Override evidence is exported with <code>manual_override</code> so demo reviewers can see which calls were human-reviewed.</p>
+      <p class="muted">Run {run_id}, fetched {fetched_at}. {footer}</p>
+    </div>
+  </main>
+</body>
+</html>
+""".format(
+        run_id=summary["run_id"],
+        fetched_at=escape(summary["fetched_at"]),
+        footer=escape(FOOTER),
     )
 
 

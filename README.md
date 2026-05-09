@@ -19,6 +19,7 @@ Outputs:
 - `out/austin_dataset_health.html`
 - `out/austin_dataset_health.csv`
 - `out/austin_dataset_health.json`
+- `out/methodology.html`
 - `data/civic_health.sqlite`
 - `data/raw/<timestamp>/data.json`
 - `data/raw/<timestamp>/manifest.json`
@@ -59,6 +60,8 @@ Tools:
 - `list_high_risk_datasets`
 - `get_top_actionable_fixes`
 - `compare_asset_types`
+- `list_classification_review_candidates`
+- `get_classification_methodology`
 - `list_datasets_by_asset_group`
 - `get_dataset_health`
 - `explain_dataset_issue`
@@ -83,9 +86,53 @@ Hard high-risk overrides for active datasets:
 - No distribution.
 - No distribution with `downloadURL` or `accessURL`.
 
-Socrata stories, measures, reference assets, and detected point-in-time/event records stay visible in the report, but they are grouped separately from active dataset risk so archival, monthly/quarterly snapshot, multi-year statistics, or indicator pages do not distort the high-risk queue.
+## Classification
+
+Every row gets an explicit classification before risk ranking:
+
+- `active_dataset`: ongoing machine-readable data or records with clear active-dataset evidence.
+- `needs_manual_review`: dated records without enough cadence or asset evidence for automatic classification.
+- `archive_snapshot`: month, quarter, single-year, or bounded-year snapshots.
+- `event_specific`: records tied to a specific incident or event.
+- `measure`: Socrata measure or indicator assets.
+- `story_reference`: Socrata stories, files, links, and other reference assets.
+
+Evidence codes include `known_cadence`, `machine_readable_distribution`, `socrata_story_asset`, `socrata_measure_asset`, `socrata_reference_asset`, `month_quarter_snapshot`, `bounded_year_range`, `event_keyword`, and `manual_override`.
+
+Manual corrections can be added to `classification_overrides.json`:
+
+```json
+{
+  "overrides": {
+    "abcd-1234": {
+      "group": "archive_snapshot",
+      "reason": "Owner confirmed this is a bounded historical snapshot.",
+      "evidence": ["owner_review"]
+    }
+  }
+}
+```
+
+After changing overrides, run with `--force` so the SQLite rows and static report are regenerated.
+
+Socrata stories, measures, reference assets, detected event records, and archive snapshots stay visible in the report, but they are grouped separately from active dataset risk so monthly/quarterly snapshots, multi-year statistics, or indicator pages do not distort the high-risk queue.
 
 Column metadata is intentionally outside the global score so enriched and unenriched datasets stay comparable.
+
+## Codex Plugin
+
+This repo includes a repo-local Codex plugin wrapper:
+
+- Manifest: `plugins/civic-data-health/.codex-plugin/plugin.json`
+- MCP config: `plugins/civic-data-health/.mcp.json`
+- Skill: `plugins/civic-data-health/skills/civic-data-health/SKILL.md`
+- Marketplace entry: `.agents/plugins/marketplace.json`
+
+The plugin points Codex at the hosted MCP server:
+
+```bash
+codex mcp add civic-data-health --url https://civic.pagonya.co/mcp
+```
 
 ## Lightsail Deployment
 

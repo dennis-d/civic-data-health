@@ -47,6 +47,7 @@ class StorageMigrationTests(unittest.TestCase):
             self.assertIn("asset_type", dataset_columns)
             self.assertIn("issue_codes_json", health_columns)
             self.assertIn("data_dictionary_quality_json", health_columns)
+            self.assertIn("classification_json", health_columns)
             migrated.close()
 
 

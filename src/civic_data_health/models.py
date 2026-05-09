@@ -41,3 +41,4 @@ class HealthResult:
     remediation: List[str]
     freshness_confidence: str
     data_dictionary_quality: Dict[str, Any]
+    classification: Dict[str, Any]

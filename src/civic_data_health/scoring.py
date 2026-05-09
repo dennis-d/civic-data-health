@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Mapping, Optional
 
+from .classification import ACTIVE_LIKE_GROUPS, FRESHNESS_EXEMPT_GROUPS, classify_dataset, is_point_in_time_record
 from .models import HealthResult, NormalizedDataset
 
 BOILERPLATE_DESCRIPTIONS = {
@@ -16,59 +17,42 @@ BOILERPLATE_DESCRIPTIONS = {
     "no description available",
 }
 
-POINT_IN_TIME_TERMS = {
-    "annual report",
-    "annual progress report",
-    "annual highlights",
-    "assessment",
-    "approved ce",
-    "covid",
-    "flood",
-    "highlights",
-    "homepage",
-    "hurricane",
-    "meals and snacks served",
-    "memorial day",
-    "pandemic",
-    "progress report",
-    "report",
-    "storm",
-    "summer meals",
-    "winter storm",
-    "year in review",
-}
-
-STANDALONE_EVENT_TERMS = {
-    "during the pandemic",
-    "hurricane harvey",
-    "winter storm",
-}
-
-MONTH_PATTERN = r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
-SNAPSHOT_RANGE_TERMS = {"data", "extract", "snapshot", "statistics", "statistic", "stats", "summary"}
-SNAPSHOT_SINGLE_YEAR_TERMS = {"extract", "snapshot", "statistics", "statistic", "stats"}
-
-
-def score_dataset(dataset: NormalizedDataset, now: Optional[datetime] = None, columns_checked: bool = False) -> HealthResult:
+def score_dataset(
+    dataset: NormalizedDataset,
+    now: Optional[datetime] = None,
+    columns_checked: bool = False,
+    classification_overrides: Optional[Mapping[str, Mapping[str, Any]]] = None,
+) -> HealthResult:
     now = now or datetime.now(timezone.utc)
     score = 100
     issues = []
     remediation = []
     freshness_confidence = "high"
-    reference_issue = reference_asset_issue_code(dataset)
-    reference_asset = reference_issue is not None
-    point_in_time = is_point_in_time_record(dataset)
-    if reference_issue:
-        issues.append(reference_issue)
-        if reference_issue == "socrata_measure_asset":
-            remediation.append("Treat this as a Socrata measure/indicator asset, not a machine-readable dataset; keep it out of the active dataset risk queue.")
-        else:
-            remediation.append("Treat this as a story/reference page, not an active machine-readable dataset; score it outside the active dataset risk queue.")
+    classification_result = classify_dataset(dataset, classification_overrides)
+    classification = classification_result.to_dict()
+    classification_group = classification["group"]
+    classification_evidence = set(classification["evidence"])
+    freshness_exempt = classification_group in FRESHNESS_EXEMPT_GROUPS
+
+    if "socrata_measure_asset" in classification_evidence:
+        issues.append("socrata_measure_asset")
+        remediation.append("Treat this as a Socrata measure/indicator asset, not a machine-readable dataset; keep it out of the active dataset risk queue.")
         freshness_confidence = "not_applicable"
-    if point_in_time:
+    if "socrata_story_asset" in classification_evidence:
+        issues.append("socrata_story_page")
+        remediation.append("Treat this as a story/reference page, not an active machine-readable dataset; score it outside the active dataset risk queue.")
+        freshness_confidence = "not_applicable"
+    if "socrata_reference_asset" in classification_evidence:
+        issues.append("socrata_reference_asset")
+        remediation.append("Treat this as a reference asset, not an active machine-readable dataset; score it outside the active dataset risk queue.")
+        freshness_confidence = "not_applicable"
+    if classification_group in {"archive_snapshot", "event_specific"}:
         issues.append("point_in_time_or_event_record")
         remediation.append("Confirm this is an archival/event-specific record; if so, mark it as archival and exclude it from active freshness expectations.")
         freshness_confidence = "not_applicable"
+    if classification_group == "needs_manual_review":
+        issues.append("classification_needs_review")
+        remediation.append("Review this record's classification because it has dated language but no clear refresh cadence.")
 
     modified_dt = parse_datetime(dataset.modified)
     cadence_days = parse_accrual_periodicity_days(dataset.accrual_periodicity)
@@ -78,7 +62,7 @@ def score_dataset(dataset: NormalizedDataset, now: Optional[datetime] = None, co
         issues.append("modified_missing")
         remediation.append("Add or repair the dataset modified timestamp.")
         freshness_confidence = "missing"
-    elif reference_asset or point_in_time:
+    elif freshness_exempt:
         pass
     elif cadence_days is not None:
         age_days = max((now - modified_dt).total_seconds() / 86400, 0)
@@ -124,16 +108,16 @@ def score_dataset(dataset: NormalizedDataset, now: Optional[datetime] = None, co
 
     hard_override = False
     if not dataset.distribution:
-        hard_override = not reference_asset and not point_in_time
+        hard_override = classification_group in ACTIVE_LIKE_GROUPS
         issues.append("no_distribution")
-        if reference_asset or point_in_time:
+        if not hard_override:
             remediation.append("If this record is meant to be machine-readable data, add a distribution; otherwise classify it separately as a reference, indicator, or archive asset.")
         else:
             remediation.append("Publish at least one distribution for machine or user access.")
     elif not dataset.machine_url:
-        hard_override = not reference_asset and not point_in_time
+        hard_override = classification_group in ACTIVE_LIKE_GROUPS
         issues.append("no_machine_readable_url")
-        if reference_asset or point_in_time:
+        if not hard_override:
             remediation.append("If this record is meant to be machine-readable data, add downloadURL or accessURL; otherwise classify it as a reference, indicator, or archive asset.")
         else:
             remediation.append("Add downloadURL or accessURL to at least one distribution.")
@@ -163,6 +147,7 @@ def score_dataset(dataset: NormalizedDataset, now: Optional[datetime] = None, co
         remediation=dedupe(remediation),
         freshness_confidence=freshness_confidence,
         data_dictionary_quality=data_dictionary_quality,
+        classification=classification,
     )
 
 
@@ -209,56 +194,6 @@ def description_issue_code(title: str, description: str) -> Optional[str]:
         return "description_boilerplate"
     if len(cleaned) < 80:
         return "description_too_short"
-    return None
-
-
-def is_point_in_time_record(dataset: NormalizedDataset) -> bool:
-    if dataset.accrual_periodicity:
-        return False
-    text = " ".join([dataset.title or "", dataset.description or ""]).casefold()
-    if any(term in text for term in STANDALONE_EVENT_TERMS):
-        return True
-    has_year = re.search(r"\b(?:19|20)\d{2}(?:\s*[-/]\s*(?:19|20)?\d{2})?\b|\bfy\s*(?:19|20)\d{2}\b", text)
-    if has_year and is_month_or_quarter_snapshot(text):
-        return True
-    if has_year and is_bounded_year_snapshot(text):
-        return True
-    return bool(has_year and any(term in text for term in POINT_IN_TIME_TERMS))
-
-
-def is_month_or_quarter_snapshot(text: str) -> bool:
-    year = r"(?:19|20)\d{2}"
-    if re.search(rf"\b{MONTH_PATTERN}\b\s+{year}\b", text):
-        return True
-    if re.search(rf"\b{year}\b\s*\(\s*{MONTH_PATTERN}\s*[-/]\s*{MONTH_PATTERN}\s*\)", text):
-        return True
-    if re.search(rf"\b(?:q[1-4]\s+{year}|{year}\s+q[1-4])\b", text):
-        return True
-    return False
-
-
-def is_bounded_year_snapshot(text: str) -> bool:
-    year = r"(?:19|20)\d{2}"
-    has_year_range = re.search(rf"\b{year}\s*[-/]\s*(?:{year}|\d{{2}})\b", text)
-    if has_year_range and any(has_word(text, term) for term in SNAPSHOT_RANGE_TERMS):
-        return True
-    if re.search(rf"\b{year}\b", text) and any(has_word(text, term) for term in SNAPSHOT_SINGLE_YEAR_TERMS):
-        return True
-    return False
-
-
-def has_word(text: str, word: str) -> bool:
-    return bool(re.search(r"\b%s\b" % re.escape(word), text))
-
-
-def reference_asset_issue_code(dataset: NormalizedDataset) -> Optional[str]:
-    asset_type = dataset.asset_type.casefold()
-    if asset_type == "story":
-        return "socrata_story_page"
-    if asset_type == "measure":
-        return "socrata_measure_asset"
-    if asset_type in {"href", "blob", "file"}:
-        return "socrata_reference_asset"
     return None
 
 

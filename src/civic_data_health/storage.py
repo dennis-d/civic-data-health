@@ -69,6 +69,7 @@ def init_db(db_path: Path) -> None:
                 remediation_json TEXT NOT NULL,
                 freshness_confidence TEXT NOT NULL,
                 data_dictionary_quality_json TEXT NOT NULL,
+                classification_json TEXT NOT NULL DEFAULT '{}',
                 PRIMARY KEY (run_id, dataset_id),
                 FOREIGN KEY (run_id, dataset_id) REFERENCES datasets(run_id, dataset_id) ON DELETE CASCADE
             );
@@ -113,6 +114,7 @@ def migrate_existing_schema(conn: sqlite3.Connection) -> None:
     ensure_column(conn, "dataset_health", "issue_codes_json", "TEXT NOT NULL DEFAULT '[]'")
     ensure_column(conn, "dataset_health", "freshness_confidence", "TEXT NOT NULL DEFAULT 'unknown'")
     ensure_column(conn, "dataset_health", "data_dictionary_quality_json", "TEXT NOT NULL DEFAULT '{}'")
+    ensure_column(conn, "dataset_health", "classification_json", "TEXT NOT NULL DEFAULT '{}'")
 
 
 def ensure_column(conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
@@ -134,10 +136,11 @@ def latest_run_for_sha(conn: sqlite3.Connection, catalog_sha256: str, limit_appl
         WHERE catalog_sha256 = ?
           AND limit_applied IS NULL
           AND normalized_count > 0
+          AND tool_version = ?
         ORDER BY fetched_at DESC, id DESC
         LIMIT 1
         """,
-        (catalog_sha256,),
+        (catalog_sha256, __version__),
     ).fetchone()
 
 
@@ -218,8 +221,8 @@ def insert_health(conn: sqlite3.Connection, run_id: int, results: Iterable[Healt
         """
         INSERT INTO dataset_health (
             run_id, dataset_id, score, label, issue_codes_json, remediation_json,
-            freshness_confidence, data_dictionary_quality_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            freshness_confidence, data_dictionary_quality_json, classification_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         [
             (
@@ -231,6 +234,7 @@ def insert_health(conn: sqlite3.Connection, run_id: int, results: Iterable[Healt
                 json.dumps(result.remediation, sort_keys=True),
                 result.freshness_confidence,
                 json.dumps(result.data_dictionary_quality, sort_keys=True),
+                json.dumps(result.classification, sort_keys=True),
             )
             for result in results
         ],
@@ -264,7 +268,7 @@ def report_rows(conn: sqlite3.Connection, run_id: int, limit: Optional[int] = No
             d.keywords_json, d.license, d.category, d.accrual_periodicity, d.landing_url,
             d.asset_type,
             d.machine_url, h.score, h.label, h.issue_codes_json, h.remediation_json,
-            h.freshness_confidence, h.data_dictionary_quality_json
+            h.freshness_confidence, h.data_dictionary_quality_json, h.classification_json
         FROM datasets d
         JOIN dataset_health h ON h.run_id = d.run_id AND h.dataset_id = d.dataset_id
         WHERE d.run_id = ?
@@ -340,4 +344,27 @@ def _decode_row(row: sqlite3.Row) -> Dict[str, Any]:
     item["issue_codes"] = json.loads(item.pop("issue_codes_json"))
     item["remediation"] = json.loads(item.pop("remediation_json"))
     item["data_dictionary_quality"] = json.loads(item.pop("data_dictionary_quality_json"))
+    item["classification"] = json.loads(item.pop("classification_json") or "{}")
+    if not item["classification"].get("group"):
+        item["classification"] = legacy_classification(item)
     return item
+
+
+def legacy_classification(item: Dict[str, Any]) -> Dict[str, Any]:
+    asset_type = str(item.get("asset_type") or "").casefold()
+    issues = set(item.get("issue_codes") or [])
+    if asset_type == "measure" or "socrata_measure_asset" in issues:
+        group = "measure"
+    elif asset_type in {"story", "href", "blob", "file"} or issues.intersection({"socrata_story_page", "socrata_reference_asset"}):
+        group = "story_reference"
+    elif "point_in_time_or_event_record" in issues:
+        group = "archive_snapshot"
+    else:
+        group = "active_dataset"
+    return {
+        "group": group,
+        "confidence": "legacy",
+        "evidence": [],
+        "reason": "Legacy row did not store explicit classification evidence.",
+        "override_applied": False,
+    }

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from . import __version__
+from .classification import load_classification_overrides
 from .normalize import normalize_catalog
 from .reports import write_reports
 from .scoring import score_dataset
@@ -54,15 +55,17 @@ def run_pipeline(
     source_url: str = DEFAULT_SOURCE_URL,
     limit: Optional[int] = None,
     force: bool = False,
+    classification_overrides_path: Optional[Path] = Path("classification_overrides.json"),
 ) -> Dict[str, Any]:
     init_db(db_path)
+    classification_overrides = load_classification_overrides(classification_overrides_path)
     fetched_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     raw_bytes = fetch_bytes(source_url)
     catalog_sha256 = hashlib.sha256(raw_bytes).hexdigest()
 
     with connect(db_path) as conn:
         existing = latest_run_for_sha(conn, catalog_sha256, limit)
-        if existing and not force:
+        if existing and not force and not classification_overrides:
             run_id = int(existing["id"])
             report_paths = write_reports(db_path=db_path, out_dir=out_dir, run_id=run_id) if out_dir else {}
             return {"run_id": run_id, "status": "unchanged", "catalog_sha256": catalog_sha256, "report_paths": report_paths}
@@ -70,7 +73,7 @@ def run_pipeline(
     catalog = json.loads(raw_bytes.decode("utf-8"))
     datasets, skipped, total_records = normalize_catalog(catalog, limit=limit)
     enrich_asset_types(db_path, datasets)
-    health_results = [score_dataset(dataset) for dataset in datasets]
+    health_results = [score_dataset(dataset, classification_overrides=classification_overrides) for dataset in datasets]
 
     snapshot_dir = data_dir / "raw" / fetched_at.replace(":", "-")
     snapshot_dir.mkdir(parents=True, exist_ok=True)
@@ -90,6 +93,10 @@ def run_pipeline(
         },
         "limit_applied": limit,
         "tool_version": __version__,
+        "classification_overrides": {
+            "path": str(classification_overrides_path) if classification_overrides_path else "",
+            "count": len(classification_overrides),
+        },
     }
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 

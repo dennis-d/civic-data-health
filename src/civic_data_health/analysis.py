@@ -3,15 +3,29 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any, Dict, Iterable, List, Literal, Optional
 
-AssetGroup = Literal["active_dataset", "measure", "story_reference", "all"]
+from .classification import CLASSIFICATION_GROUPS
+
+AssetGroup = Literal["active_dataset", "needs_manual_review", "archive_snapshot", "event_specific", "measure", "story_reference", "all"]
 
 REFERENCE_ASSET_TYPES = {"story", "href", "blob", "file"}
 
 ASSET_GROUP_LABELS = {
     "active_dataset": "Active datasets",
+    "needs_manual_review": "Needs classification review",
+    "archive_snapshot": "Archive snapshots",
+    "event_specific": "Event-specific records",
     "measure": "Measures and indicators",
     "story_reference": "Stories and reference assets",
     "all": "All assets",
+}
+
+NON_ACTIONABLE_ISSUES = {
+    "socrata_story_page",
+    "socrata_measure_asset",
+    "socrata_reference_asset",
+    "point_in_time_or_event_record",
+    "classification_needs_review",
+    "columns_not_checked",
 }
 
 ISSUE_DETAILS: Dict[str, Dict[str, Any]] = {
@@ -141,6 +155,13 @@ ISSUE_DETAILS: Dict[str, Dict[str, Any]] = {
         "priority": 35,
         "effort": "low",
     },
+    "classification_needs_review": {
+        "title": "Needs classification review",
+        "plain_english": "The record contains dated language but does not provide enough cadence or asset-type evidence for automatic classification.",
+        "recommended_action": "Confirm whether this is active data, an archive snapshot, or an event-specific record, then add an override if needed.",
+        "priority": 50,
+        "effort": "low",
+    },
     "columns_not_checked": {
         "title": "Column metadata not checked",
         "plain_english": "Column metadata was not part of the global score.",
@@ -152,11 +173,15 @@ ISSUE_DETAILS: Dict[str, Dict[str, Any]] = {
 
 
 def asset_group(row: Dict[str, Any]) -> str:
+    classification = row.get("classification") or {}
+    group = classification.get("group")
+    if group in ASSET_GROUP_LABELS:
+        return str(group)
     asset_type = str(row.get("asset_type") or "").casefold()
     if asset_type == "measure":
         return "measure"
     if "point_in_time_or_event_record" in row.get("issue_codes", []):
-        return "story_reference"
+        return "archive_snapshot"
     if asset_type in REFERENCE_ASSET_TYPES or (asset_type and asset_type != "measure"):
         return "story_reference"
     return "active_dataset"
@@ -168,7 +193,7 @@ def asset_group_label(group: str) -> str:
 
 def summarize_asset_groups(rows: Iterable[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     summaries: Dict[str, Dict[str, Any]] = {}
-    grouped: Dict[str, List[Dict[str, Any]]] = {"active_dataset": [], "measure": [], "story_reference": []}
+    grouped: Dict[str, List[Dict[str, Any]]] = {group: [] for group in CLASSIFICATION_GROUPS}
     for row in rows:
         grouped.setdefault(asset_group(row), []).append(row)
     for group, group_rows in grouped.items():
@@ -202,7 +227,7 @@ def filter_by_asset_group(rows: Iterable[Dict[str, Any]], group: str) -> List[Di
 def top_actionable_fixes(rows: Iterable[Dict[str, Any]], *, limit: int = 25, group: str = "active_dataset") -> List[Dict[str, Any]]:
     candidates = []
     for row in filter_by_asset_group(rows, group):
-        actionable_issues = [issue for issue in row["issue_codes"] if issue in ISSUE_DETAILS and issue not in {"socrata_story_page", "socrata_measure_asset", "socrata_reference_asset", "point_in_time_or_event_record", "columns_not_checked"}]
+        actionable_issues = [issue for issue in row["issue_codes"] if issue in ISSUE_DETAILS and issue not in NON_ACTIONABLE_ISSUES]
         if not actionable_issues:
             continue
         issue_priority = sum(int(ISSUE_DETAILS[issue]["priority"]) for issue in actionable_issues)
@@ -217,6 +242,7 @@ def top_actionable_fixes(rows: Iterable[Dict[str, Any]], *, limit: int = 25, gro
                 "label": row["label"],
                 "asset_group": asset_group(row),
                 "asset_group_label": asset_group_label(asset_group(row)),
+                "classification": row.get("classification") or {},
                 "asset_type": row.get("asset_type") or "dataset",
                 "owner": row.get("publisher") or row.get("contact") or "Missing",
                 "contact": row.get("contact") or "",
@@ -259,6 +285,7 @@ def explain_dataset_issues(row: Dict[str, Any], issue_code: Optional[str] = None
         "score": row["score"],
         "asset_group": asset_group(row),
         "asset_group_label": asset_group_label(asset_group(row)),
+        "classification": row.get("classification") or {},
         "issues": [explain_issue(issue) for issue in issues],
     }
 
@@ -281,6 +308,7 @@ Current result:
 - Label: {label}
 - Score: {score}
 - Asset type: {asset_type}
+- Classification: {classification}
 - Issues: {issues}
 
 Recommended next steps:
@@ -299,6 +327,7 @@ Thank you,
         label=row["label"],
         score=row["score"],
         asset_type=row.get("asset_type") or "active dataset",
+        classification=asset_group_label(asset_group(row)),
         issues=issue_lines,
         actions=action_lines,
         url=row.get("landing_url") or "",

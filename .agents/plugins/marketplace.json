@@ -1,0 +1,20 @@
+{
+  "name": "civic-data-health-local",
+  "interface": {
+    "displayName": "Civic Data Health"
+  },
+  "plugins": [
+    {
+      "name": "civic-data-health",
+      "source": {
+        "source": "local",
+        "path": "./plugins/civic-data-health"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
