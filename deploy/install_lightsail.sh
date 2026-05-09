@@ -24,8 +24,7 @@ else
 fi
 
 sudo /usr/local/bin/uv venv --clear --python 3.12 "$APP_DIR/.venv"
-sudo "$APP_DIR/.venv/bin/pip" install --upgrade pip
-sudo "$APP_DIR/.venv/bin/pip" install "$APP_DIR"
+sudo /usr/local/bin/uv pip install --python "$APP_DIR/.venv/bin/python" "$APP_DIR"
 sudo rm -rf "$APP_DIR/build"
 sudo cp "$APP_DIR/deploy/civic-health.service" /etc/systemd/system/civic-health.service
 sudo cp "$APP_DIR/deploy/civic-health-refresh.service" /etc/systemd/system/civic-health-refresh.service
