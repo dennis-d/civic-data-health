@@ -12,6 +12,9 @@ from .storage import connect, latest_run_id, report_rows, run_summary, skipped_r
 
 FOOTER = "Independent analysis using public City of Austin open data. Not affiliated with or endorsed by the City of Austin."
 SECTION_ORDER = ("active_dataset", "needs_manual_review", "archive_snapshot", "event_specific", "measure", "story_reference")
+PUBLIC_SITE_URL = "https://civic.pagonya.co"
+PUBLIC_MCP_URL = PUBLIC_SITE_URL + "/mcp"
+OPENAI_CONNECT_DOC_URL = "https://developers.openai.com/apps-sdk/deploy/connect-chatgpt"
 
 
 def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[int] = None) -> Dict[str, str]:
@@ -31,6 +34,7 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
     html_path = out_dir / "austin_dataset_health.html"
     index_path = out_dir / "index.html"
     methodology_path = out_dir / "methodology.html"
+    help_path = out_dir / "help.html"
     detail_dir = out_dir / "datasets"
     group_summary = summarize_asset_groups(rows)
 
@@ -49,6 +53,7 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
     html_path.write_text(html_text, encoding="utf-8")
     index_path.write_text(html_text, encoding="utf-8")
     methodology_path.write_text(render_methodology_page(summary), encoding="utf-8")
+    help_path.write_text(render_help_page(summary), encoding="utf-8")
 
     return {
         "json": str(json_path),
@@ -56,6 +61,7 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
         "html": str(html_path),
         "index": str(index_path),
         "methodology": str(methodology_path),
+        "help": str(help_path),
         "details": str(detail_dir),
     }
 
@@ -185,6 +191,7 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
         <a href="austin_dataset_health.csv">Download CSV</a>
         <a href="austin_dataset_health.json">Download JSON</a>
         <a href="methodology.html">Methodology</a>
+        <a href="help.html">Connect to ChatGPT</a>
       </div>
       <nav class="tabs" aria-label="Report sections">
         <a href="#active_dataset">Active datasets</a>
@@ -445,7 +452,7 @@ def render_methodology_page(summary: Dict[str, Any]) -> str:
 </head>
 <body>
   <main>
-    <p><a href="index.html">Back to report</a></p>
+    <p><a href="index.html">Back to report</a> | <a href="help.html">Connect to ChatGPT</a></p>
     <h1>Methodology</h1>
     <div class="panel">
       <h2>Classification First</h2>
@@ -485,6 +492,107 @@ def render_methodology_page(summary: Dict[str, Any]) -> str:
 </body>
 </html>
 """.format(
+        run_id=summary["run_id"],
+        fetched_at=escape(summary["fetched_at"]),
+        footer=escape(FOOTER),
+    )
+
+
+def render_help_page(summary: Dict[str, Any]) -> str:
+    return """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Connect to ChatGPT - Civic Data Health</title>
+  <style>
+    :root {{ color-scheme: light; --ink:#18212f; --muted:#5f6b7a; --line:#d8dee8; --bg:#f4f6f8; --panel:#ffffff; --accent:#0f5f7a; --soft:#e8eef2; }}
+    body {{ margin:0; font-family: Georgia, "Times New Roman", serif; color:var(--ink); background:var(--bg); }}
+    header {{ background:var(--soft); border-bottom:1px solid var(--line); }}
+    main {{ max-width:940px; margin:0 auto; padding:28px 18px 44px; }}
+    h1 {{ margin:0 0 10px; font-size:clamp(30px, 5vw, 48px); letter-spacing:0; }}
+    h2 {{ margin:0 0 10px; }}
+    p {{ line-height:1.5; }}
+    a {{ color:var(--accent); }}
+    .panel {{ background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:18px; margin:14px 0; }}
+    .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }}
+    .muted {{ color:var(--muted); }}
+    code, pre {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }}
+    pre {{ overflow:auto; background:#101820; color:#f7fbff; border-radius:8px; padding:14px; }}
+    li {{ margin:8px 0; }}
+    .endpoint {{ display:block; font-size:16px; margin-top:6px; word-break:break-all; }}
+  </style>
+</head>
+<body>
+  <header>
+    <main>
+      <p><a href="index.html">Back to report</a> | <a href="methodology.html">Methodology</a></p>
+      <h1>Connect Civic Data Health to ChatGPT</h1>
+      <p>This page is for a live demo. The MCP server is public, HTTPS, and read-only, so ChatGPT can connect to it directly without a localhost tunnel.</p>
+    </main>
+  </header>
+  <main>
+    <div class="panel grid">
+      <div>
+        <h2>MCP URL</h2>
+        <code class="endpoint">{mcp_url}</code>
+      </div>
+      <div>
+        <h2>Health Check</h2>
+        <code class="endpoint">{mcp_url}/health</code>
+      </div>
+      <div>
+        <h2>Public Report</h2>
+        <code class="endpoint">{site_url}/</code>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>ChatGPT Setup</h2>
+      <ol>
+        <li>Open ChatGPT web and go to <strong>Settings -&gt; Apps &amp; Connectors -&gt; Advanced settings</strong>.</li>
+        <li>Turn on <strong>Developer mode</strong>. If your workspace disables it, an admin needs to allow developer mode first.</li>
+        <li>Go back to <strong>Settings -&gt; Apps &amp; Connectors</strong> and click <strong>Create</strong>.</li>
+        <li>Use <strong>Civic Data Health</strong> as the connector name.</li>
+        <li>Use this description: <em>Ask questions about Austin open data, find relevant datasets, inspect dataset health, schemas, sample rows, and data quality issues.</em></li>
+        <li>Use <code>{mcp_url}</code> as the connector URL.</li>
+        <li>Use no authentication for the demo. This server only exposes public, read-only Austin open data tools.</li>
+        <li>Click <strong>Create</strong>. ChatGPT should show the tool list advertised by the MCP server.</li>
+      </ol>
+    </div>
+    <div class="panel">
+      <h2>Demo Prompts</h2>
+      <ul>
+        <li>Find Austin datasets about building permits and tell me which one is best for answering permit volume questions.</li>
+        <li>How many building permits were issued in 2025?</li>
+        <li>Which active Austin datasets have the most actionable metadata fixes?</li>
+        <li>Find datasets related to homelessness services and show data quality caveats.</li>
+        <li>Show the schema and a few sample rows for a relevant public safety dataset.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h2>Smoke Test</h2>
+      <p>If ChatGPT cannot create the connector, verify the endpoint from a terminal:</p>
+      <pre>curl {mcp_url}/health
+
+curl -sS -X POST {mcp_url} \\
+  -H 'content-type: application/json' \\
+  -H 'accept: application/json, text/event-stream' \\
+  --data '{{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{{}}}}'</pre>
+      <p class="muted">MCP tool probes need the <code>Accept: application/json, text/event-stream</code> header. ChatGPT also requires a public HTTPS endpoint; <code>localhost</code> is not reachable from ChatGPT web.</p>
+    </div>
+    <div class="panel">
+      <h2>After Changes</h2>
+      <p>When tools, descriptions, or schemas change, redeploy this server and refresh the connector metadata in ChatGPT under <strong>Settings -&gt; Apps &amp; Connectors</strong>.</p>
+      <p>Official setup reference: <a href="{docs_url}">OpenAI Apps SDK - Connect from ChatGPT</a>.</p>
+      <p class="muted">Run {run_id}, fetched {fetched_at}. {footer}</p>
+    </div>
+  </main>
+</body>
+</html>
+""".format(
+        mcp_url=escape(PUBLIC_MCP_URL),
+        site_url=escape(PUBLIC_SITE_URL),
+        docs_url=escape(OPENAI_CONNECT_DOC_URL),
         run_id=summary["run_id"],
         fetched_at=escape(summary["fetched_at"]),
         footer=escape(FOOTER),

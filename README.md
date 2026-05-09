@@ -20,6 +20,7 @@ Outputs:
 - `out/austin_dataset_health.csv`
 - `out/austin_dataset_health.json`
 - `out/methodology.html`
+- `out/help.html`
 - `data/civic_health.sqlite`
 - `data/raw/<timestamp>/data.json`
 - `data/raw/<timestamp>/manifest.json`
