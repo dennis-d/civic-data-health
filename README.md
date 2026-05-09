@@ -71,6 +71,11 @@ Tools:
 - `draft_department_email`
 - `ask_city_data_question`
 - `find_city_datasets_for_question`
+- `get_dataset_capabilities`
+- `search_dataset_columns`
+- `find_answerable_datasets`
+- `search_city_knowledge`
+- `fetch_city_knowledge`
 - `get_dataset_schema`
 - `get_sample_rows`
 - `query_dataset_count`
@@ -174,6 +179,18 @@ Supporting tools:
 - `query_dataset_count`: runs a safe count over a known dataset, optionally with a validated date range.
 
 Set `SOCRATA_APP_TOKEN` in the service environment if public traffic grows; unauthenticated Socrata calls can be throttled.
+
+## Schema Knowledge
+
+MCP tools can inspect Socrata schemas on demand and cache them in SQLite:
+
+- `get_dataset_capabilities`: summarizes date, geography, numeric, categorical, and text fields for one dataset.
+- `search_dataset_columns`: finds matching columns such as `council district`, `issue date`, `latitude`, `status`, or `amount` across the strongest catalog candidates.
+- `find_answerable_datasets`: ranks datasets that can answer a plain-English question based on schema capabilities.
+- `search_city_knowledge`: combines catalog search with schema-column search.
+- `fetch_city_knowledge`: expands one dataset id into health, classification, category suggestion, and schema capabilities.
+
+These tools intentionally inspect candidate datasets instead of fetching every schema on every run.
 
 ## Lightsail Deployment
 

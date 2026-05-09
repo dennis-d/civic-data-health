@@ -20,6 +20,7 @@ from .analysis import (
     summarize_asset_groups,
     top_actionable_fixes,
 )
+from .capabilities import find_answerable, get_capabilities_for_row, search_columns
 from .category_suggestions import rows_with_category_suggestions
 from .discovery import answer_city_data_question, find_city_datasets
 from .row_answer import answer_row_level_question, build_date_where, DateRange
@@ -335,6 +336,118 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
                 "run_id": run_id,
                 "question": normalized_question,
                 "datasets": [match.to_result() for match in matches],
+            }
+
+    @mcp.tool(
+        title="Get Dataset Capabilities",
+        description="Use this when you need to know whether a dataset has date, geography, numeric, text, or categorical fields.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def get_dataset_capabilities(dataset_id: str) -> Dict[str, Any]:
+        normalized_id = dataset_id.strip().lower()
+        if not normalized_id:
+            raise ValueError("dataset_id is required")
+        with connect(db_path) as conn:
+            run_id = require_latest_run_id(conn)
+            row = find_dataset(report_rows(conn, run_id), normalized_id)
+            if row is None:
+                raise ValueError("Dataset id not found in latest run: %s" % normalized_id)
+            return {"run_id": run_id, "capabilities": get_capabilities_for_row(conn, row)}
+
+    @mcp.tool(
+        title="Search Dataset Columns",
+        description="Use this when you need datasets whose schema has fields like council district, issue date, latitude, status, amount, or permit type.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def search_dataset_columns(query: str, limit: int = 20) -> Dict[str, Any]:
+        normalized_query = query.strip()
+        if not normalized_query:
+            raise ValueError("query is required")
+        with connect(db_path) as conn:
+            run_id = require_latest_run_id(conn)
+            result = search_columns(conn, report_rows(conn, run_id), normalized_query, limit=clamp_limit(limit))
+            return {"run_id": run_id, **result}
+
+    @mcp.tool(
+        title="Find Answerable Datasets",
+        description="Use this when you need datasets that can answer a question based on schema capabilities like date, geography, and count support.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def find_answerable_datasets(question: str, limit: int = 8) -> Dict[str, Any]:
+        normalized_question = question.strip()
+        if not normalized_question:
+            raise ValueError("question is required")
+        with connect(db_path) as conn:
+            run_id = require_latest_run_id(conn)
+            result = find_answerable(conn, report_rows(conn, run_id), normalized_question, limit=clamp_limit(limit))
+            return {"run_id": run_id, **result}
+
+    @mcp.tool(
+        title="Search City Knowledge",
+        description="Use this for a combined city-data knowledge search over catalog records and matching dataset columns.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def search_city_knowledge(query: str, limit: int = 10) -> Dict[str, Any]:
+        normalized_query = query.strip()
+        if not normalized_query:
+            raise ValueError("query is required")
+        safe_limit = clamp_limit(limit)
+        with connect(db_path) as conn:
+            run_id = require_latest_run_id(conn)
+            rows = report_rows(conn, run_id)
+            dataset_matches = [match.to_result() for match in find_city_datasets(rows, normalized_query, limit=safe_limit)]
+            column_result = search_columns(conn, rows, normalized_query, limit=safe_limit, candidate_limit=safe_limit)
+            return {
+                "run_id": run_id,
+                "query": normalized_query,
+                "datasets": dataset_matches,
+                "column_matches": column_result["matches"],
+                "inspected": column_result["inspected"],
+                "method": "Combined catalog search with on-demand Socrata schema search.",
+            }
+
+    @mcp.tool(
+        title="Fetch City Knowledge",
+        description="Use this when you need the full health, classification, category suggestion, and schema capabilities for one city dataset.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def fetch_city_knowledge(id: str) -> Dict[str, Any]:
+        normalized_id = id.strip().lower()
+        if not normalized_id:
+            raise ValueError("id is required")
+        with connect(db_path) as conn:
+            run_id = require_latest_run_id(conn)
+            row = find_dataset(report_rows(conn, run_id), normalized_id)
+            if row is None:
+                raise ValueError("Dataset id not found in latest run: %s" % normalized_id)
+            capabilities = None
+            schema_status = "not_checked"
+            if asset_group(row) == "active_dataset" and row.get("machine_url"):
+                capabilities = get_capabilities_for_row(conn, row)
+                schema_status = "checked"
+            else:
+                schema_status = "skipped: not an active machine-readable dataset"
+            return {
+                "run_id": run_id,
+                "id": row["dataset_id"],
+                "title": row["title"],
+                "url": dataset_url(row),
+                "dataset": row,
+                "schema_status": schema_status,
+                "capabilities": capabilities,
+                "recommended_tools": [
+                    "get_dataset_health",
+                    "get_dataset_schema",
+                    "get_sample_rows",
+                    "query_dataset_count",
+                ]
+                if capabilities
+                else ["get_dataset_health"],
             }
 
     @mcp.tool(
