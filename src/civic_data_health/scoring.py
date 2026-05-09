@@ -45,6 +45,8 @@ STANDALONE_EVENT_TERMS = {
 }
 
 MONTH_PATTERN = r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+SNAPSHOT_RANGE_TERMS = {"data", "extract", "snapshot", "statistics", "statistic", "stats", "summary"}
+SNAPSHOT_SINGLE_YEAR_TERMS = {"extract", "snapshot", "statistics", "statistic", "stats"}
 
 
 def score_dataset(dataset: NormalizedDataset, now: Optional[datetime] = None, columns_checked: bool = False) -> HealthResult:
@@ -219,6 +221,8 @@ def is_point_in_time_record(dataset: NormalizedDataset) -> bool:
     has_year = re.search(r"\b(?:19|20)\d{2}(?:\s*[-/]\s*(?:19|20)?\d{2})?\b|\bfy\s*(?:19|20)\d{2}\b", text)
     if has_year and is_month_or_quarter_snapshot(text):
         return True
+    if has_year and is_bounded_year_snapshot(text):
+        return True
     return bool(has_year and any(term in text for term in POINT_IN_TIME_TERMS))
 
 
@@ -231,6 +235,20 @@ def is_month_or_quarter_snapshot(text: str) -> bool:
     if re.search(rf"\b(?:q[1-4]\s+{year}|{year}\s+q[1-4])\b", text):
         return True
     return False
+
+
+def is_bounded_year_snapshot(text: str) -> bool:
+    year = r"(?:19|20)\d{2}"
+    has_year_range = re.search(rf"\b{year}\s*[-/]\s*(?:{year}|\d{{2}})\b", text)
+    if has_year_range and any(has_word(text, term) for term in SNAPSHOT_RANGE_TERMS):
+        return True
+    if re.search(rf"\b{year}\b", text) and any(has_word(text, term) for term in SNAPSHOT_SINGLE_YEAR_TERMS):
+        return True
+    return False
+
+
+def has_word(text: str, word: str) -> bool:
+    return bool(re.search(r"\b%s\b" % re.escape(word), text))
 
 
 def reference_asset_issue_code(dataset: NormalizedDataset) -> Optional[str]:

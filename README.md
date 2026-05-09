@@ -83,7 +83,7 @@ Hard high-risk overrides for active datasets:
 - No distribution.
 - No distribution with `downloadURL` or `accessURL`.
 
-Socrata stories, measures, reference assets, and detected point-in-time/event records stay visible in the report, but they are grouped separately from active dataset risk so archival, monthly/quarterly snapshot, or indicator pages do not distort the high-risk queue.
+Socrata stories, measures, reference assets, and detected point-in-time/event records stay visible in the report, but they are grouped separately from active dataset risk so archival, monthly/quarterly snapshot, multi-year statistics, or indicator pages do not distort the high-risk queue.
 
 Column metadata is intentionally outside the global score so enriched and unenriched datasets stay comparable.
 
