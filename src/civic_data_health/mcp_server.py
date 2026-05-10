@@ -24,7 +24,7 @@ from .analysis import (
 from .capabilities import find_answerable, get_capabilities_for_row, search_columns
 from .category_suggestions import rows_with_category_suggestions
 from .discovery import answer_city_data_question, find_city_datasets
-from .public_catalog import PUBLIC_CATALOGS, search_government_resources, search_public_catalogs
+from .public_catalog import PUBLIC_CATALOGS, search_government_resources, search_public_catalogs, search_service_guides
 from .row_answer import answer_row_level_question, build_date_where, DateRange
 from .socrata import (
     count_rows,
@@ -410,6 +410,22 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
             "query": normalized_query,
             "source_scope": public_source_scope(jurisdiction),
             "resources": search_government_resources(normalized_query, jurisdiction=jurisdiction, limit=clamp_limit(limit)),
+        }
+
+    @mcp.tool(
+        title="Find Government Service Guides",
+        description="Primary guide search for common Texas/Austin workflows such as business setup, building permits, food permits, property/zoning, and 3-1-1/code complaints.",
+        annotations=READ_ONLY,
+        structured_output=True,
+    )
+    def find_government_service_guides(query: str, jurisdiction: JurisdictionArg = "all", limit: int = 5) -> Dict[str, Any]:
+        normalized_query = query.strip()
+        if not normalized_query:
+            raise ValueError("query is required")
+        return {
+            "query": normalized_query,
+            "source_scope": public_source_scope(jurisdiction),
+            "guides": search_service_guides(normalized_query, jurisdiction=jurisdiction, limit=clamp_limit(limit)),
         }
 
     @mcp.tool(
@@ -873,8 +889,14 @@ def _latest_run_id(db_path: Path) -> int:
 
 def answer_public_government_question(question: str, *, jurisdiction: str, limit: int, include_rows: bool) -> Dict[str, Any]:
     safe_limit = max(1, min(int(limit or 5), 10))
+    guides = search_service_guides(question, jurisdiction=jurisdiction, limit=min(safe_limit, 5))
     resources = search_government_resources(question, jurisdiction=jurisdiction, limit=safe_limit)
     datasets = search_public_catalogs(question, jurisdiction=jurisdiction, limit=safe_limit)
+    suggested_dataset_queries = []
+    for guide in guides:
+        for query in guide["related_dataset_queries"]:
+            if query not in suggested_dataset_queries:
+                suggested_dataset_queries.append(query)
     packages = []
     errors = []
     if include_rows:
@@ -903,18 +925,22 @@ def answer_public_government_question(question: str, *, jurisdiction: str, limit
                 break
     return {
         "question": question,
-        "answer": build_public_government_answer(resources, datasets, packages),
+        "answer": build_public_government_answer(guides, resources, datasets, packages),
         "source_scope": public_source_scope(jurisdiction),
+        "service_guides": guides,
         "official_resources": resources,
         "datasets": datasets,
+        "suggested_dataset_queries": suggested_dataset_queries[:8],
         "data_packages": packages,
         "row_errors": errors,
-        "method": "Searched official Texas and Austin service links plus public Socrata data catalogs; fetched bounded public rows from matching queryable datasets when requested.",
+        "method": "Searched curated Texas/Austin service guides, official service links, and public Socrata data catalogs; fetched bounded public rows from matching queryable datasets when requested.",
     }
 
 
-def build_public_government_answer(resources: List[Dict[str, Any]], datasets: List[Dict[str, Any]], packages: List[Dict[str, Any]]) -> str:
+def build_public_government_answer(guides: List[Dict[str, Any]], resources: List[Dict[str, Any]], datasets: List[Dict[str, Any]], packages: List[Dict[str, Any]]) -> str:
     pieces = []
+    if guides:
+        pieces.append("I found curated service guides with steps, official links, related dataset searches, and caveats.")
     if resources:
         pieces.append("I found official government starting points for this request.")
     if datasets:
@@ -922,7 +948,7 @@ def build_public_government_answer(resources: List[Dict[str, Any]], datasets: Li
     if packages:
         pieces.append("I included bounded live public rows from the strongest queryable dataset matches.")
     if not pieces:
-        return "I did not find a strong official resource or public-data catalog match. Try naming the agency, permit type, location, or service."
+        return "I did not find a strong service guide, official resource, or public-data catalog match. Try naming the agency, permit type, location, or service."
     return " ".join(pieces)
 
 

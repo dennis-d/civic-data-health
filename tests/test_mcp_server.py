@@ -78,8 +78,22 @@ class MCPServerTests(unittest.TestCase):
 
             self.assertIn("Primary search tool", tools["ask_texas_government_question"].description)
             self.assertIn("Primary catalog search", tools["search_public_data_catalogs"].description)
+            self.assertIn("Primary guide search", tools["find_government_service_guides"].description)
             self.assertIn("Secondary dataset-quality tool", tools["get_report_summary"].description)
             self.assertIn("Secondary citation-friendly search", tools["search"].description)
+
+    def test_government_service_guides_are_callable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mcp = create_mcp(Path(tmp) / "civic.sqlite", "127.0.0.1", 0)
+
+            content, structured = asyncio.run(
+                mcp.call_tool("find_government_service_guides", {"query": "food business permit in Austin"})
+            )
+            result = structured["result"]
+
+            self.assertEqual(result["guides"][0]["id"], "austin_food_business")
+            self.assertIn("official_resources", result["guides"][0])
+            self.assertEqual(json.loads(content[0].text), result)
 
     def test_search_and_fetch_advertise_compatibility_output_schemas(self):
         with tempfile.TemporaryDirectory() as tmp:

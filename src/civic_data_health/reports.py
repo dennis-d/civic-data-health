@@ -664,6 +664,8 @@ def render_help_page(summary: Dict[str, Any]) -> str:
       <h2>Demo Prompts</h2>
       <ul>
         <li>How do I start a food business permit process in Texas and Austin, and what public datasets can help me research it?</li>
+        <li>Show me a starter guide for checking property zoning before I lease a storefront in Austin.</li>
+        <li>How do I file or research an Austin 3-1-1 code complaint?</li>
         <li>Find State of Texas open datasets about occupational licenses or business permits.</li>
         <li>Find Austin datasets about building permits and show a small public row sample.</li>
         <li>How many building permits were issued in Austin in 2025?</li>

@@ -356,6 +356,18 @@
         "destructive_justification": "Does not send messages, submit forms, or create applications."
       }
     },
+    "find_government_service_guides": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Returns curated public-information guides, official links, caveats, and related dataset search ideas without changing anything.",
+        "open_world_justification": "Only returns packaged public guide content and public official links inside ChatGPT.",
+        "destructive_justification": "Does not submit forms, send messages, create cases, file applications, or alter any government system."
+      }
+    },
     "query_public_dataset_rows": {
       "annotations": {
         "readOnlyHint": true,
@@ -399,7 +411,15 @@
       "user_prompt": "Using Texas State Data, how do I start a food business permit process in Texas and Austin, and what public datasets can help me research it?",
       "file_attachment_urls": null,
       "tools_triggered": "ask_texas_government_question",
-      "expected_output": "Returns official Texas and Austin permit or license starting links, relevant public catalog datasets, bounded row samples when useful, and caveats that requirements depend on agency, locality, activity, property, and project scope.",
+      "expected_output": "Returns a food-business service guide, official Texas and Austin permit or license starting links, relevant public catalog datasets, bounded row samples when useful, and caveats that requirements depend on agency, locality, activity, property, and project scope.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Find a curated government workflow guide.",
+      "user_prompt": "Use Texas State Data to show me a starter guide for checking Austin property zoning before I lease a storefront.",
+      "file_attachment_urls": null,
+      "tools_triggered": "find_government_service_guides",
+      "expected_output": "Returns the Austin property/zoning service guide with official Property Profile and zoning links, steps, related dataset searches, and caveats about formal verification.",
       "expected_output_url": null
     },
     {

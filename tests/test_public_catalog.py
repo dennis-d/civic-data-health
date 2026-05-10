@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from civic_data_health.public_catalog import search_government_resources, search_public_catalogs
+from civic_data_health.public_catalog import search_government_resources, search_public_catalogs, search_service_guides
 
 
 def catalog_loader(source_key: str):
@@ -44,6 +44,17 @@ class PublicCatalogTests(unittest.TestCase):
         titles = {item["title"] for item in result}
         self.assertIn("Business Permit Office", titles)
         self.assertIn("Austin Development Services permits", titles)
+
+    def test_search_service_guides_finds_common_workflows(self):
+        food_result = search_service_guides("start food business permit in Austin", jurisdiction="all")
+        property_result = search_service_guides("check property zoning before permit", jurisdiction="austin")
+        complaint_result = search_service_guides("report code complaint 311", jurisdiction="austin")
+
+        self.assertEqual(food_result[0]["id"], "austin_food_business")
+        self.assertEqual(property_result[0]["id"], "austin_property_zoning")
+        self.assertEqual(complaint_result[0]["id"], "austin_311_code_complaint")
+        self.assertIn("related_dataset_queries", food_result[0])
+        self.assertIn("official_resources", property_result[0])
 
 
 if __name__ == "__main__":

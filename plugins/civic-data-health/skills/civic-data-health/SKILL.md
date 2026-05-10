@@ -35,6 +35,7 @@ Primary search and service tools:
 - `ask_civic_data_question`: general Texas/Austin civic search with official links and public rows.
 - `search_public_data_catalogs`: public catalog search across State of Texas and Austin.
 - `find_government_service_resources`: official starting links for permits, licenses, business, and government services.
+- `find_government_service_guides`: curated workflow guides for Texas business setup, Austin permits, food businesses, property/zoning, and 3-1-1/code complaints.
 - `query_public_dataset_rows`: bounded public rows after search identifies a known Texas or Austin Socrata dataset.
 - `ask_austin_data_question`: Austin-specific data search with schema checks and bounded rows.
 - `ask_city_data_question`: Austin-only plain-English dataset discovery.

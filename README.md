@@ -61,6 +61,7 @@ Primary search and service tools:
 - `ask_civic_data_question`
 - `search_public_data_catalogs`
 - `find_government_service_resources`
+- `find_government_service_guides`
 - `query_public_dataset_rows`
 - `ask_austin_data_question`
 - `ask_city_data_question`
@@ -199,6 +200,7 @@ Primary tools:
 - `ask_texas_government_question`: searches official Texas/Austin service resources and public open-data catalogs, then includes bounded public rows from matching queryable Socrata datasets when useful.
 - `search_public_data_catalogs`: searches `https://data.texas.gov/data.json` and `https://data.austintexas.gov/data.json`.
 - `find_government_service_resources`: returns official starting links for permit, license, business, and government-service questions.
+- `find_government_service_guides`: returns curated starter guides for common workflows such as Texas business setup, Austin building permits, Austin food business permits, Austin property/zoning research, and Austin 3-1-1/code complaints.
 - `query_public_dataset_rows`: fetches bounded read-only rows from a known State of Texas or Austin Socrata dataset.
 
 Example:
@@ -207,7 +209,15 @@ Example:
 How do I start a food business permit process in Texas and Austin, and what public datasets can help me research it?
 ```
 
-The tool returns official Texas and Austin starting links, matching open-data records, bounded row samples when a dataset is queryable, and caveats that permit requirements depend on the agency, locality, business activity, property, and project scope.
+The tool returns curated service guides, official Texas and Austin starting links, matching open-data records, bounded row samples when a dataset is queryable, suggested dataset searches, and caveats that permit requirements depend on the agency, locality, business activity, property, and project scope.
+
+Current service guides:
+
+- Start a Texas business.
+- Start an Austin building or trade permit.
+- Start an Austin food business permit.
+- Research Austin property, zoning, and development constraints.
+- File or research Austin 3-1-1 and code complaints.
 
 ## Schema Knowledge
 
