@@ -861,7 +861,7 @@ def render_submission_page(summary: Dict[str, Any]) -> str:
       <h2>Dashboard Fields</h2>
       <dl>
         <dt>App name</dt><dd>Public Texas State and Austin City Search</dd>
-        <dt>Subtitle</dt><dd>TX and Austin public data</dd>
+        <dt>Subtitle</dt><dd>Find TX and Austin data</dd>
         <dt>Category</dt><dd>Productivity</dd>
         <dt>MCP URL</dt><dd><code>{mcp_url}</code></dd>
         <dt>Website URL</dt><dd><a href="{site_url}">{site_url}</a></dd>

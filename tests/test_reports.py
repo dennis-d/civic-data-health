@@ -63,7 +63,7 @@ class ReportRenderTests(unittest.TestCase):
 
         self.assertIn("ChatGPT App Submission Checklist", html)
         self.assertIn("Public Texas State and Austin City Search", html)
-        self.assertIn("TX and Austin public data", html)
+        self.assertIn("Find TX and Austin data", html)
         self.assertIn(PUBLIC_MCP_URL, html)
         self.assertIn(PRIVACY_URL, html)
         self.assertIn(SUPPORT_URL, html)

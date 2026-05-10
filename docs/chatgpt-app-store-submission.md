@@ -5,7 +5,7 @@ Use this as the dashboard checklist for publishing Public Texas State and Austin
 ## Dashboard Values
 
 - App name: Public Texas State and Austin City Search
-- Subtitle: TX and Austin public data
+- Subtitle: Find TX and Austin data
 - Category: Productivity
 - MCP URL: https://civic.pagonya.co/mcp
 - Website URL: https://civic.pagonya.co/

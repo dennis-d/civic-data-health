@@ -3,7 +3,7 @@
   "schema_version": 1,
   "app_info": {
     "display_name": "Public Texas State and Austin City Search",
-    "subtitle": "TX and Austin public data",
+    "subtitle": "Find TX and Austin data",
     "description": "Public Texas State and Austin City Search is primarily for searching State of Texas and City of Austin public datasets, finding official permit/license/service starting points, and fetching bounded read-only rows from public Socrata datasets. Austin dataset health and metadata quality checks are secondary context for caveats, stewardship issues, and cleanup guidance. The app is read-only, independently operated, and uses public Texas/Austin open-data catalogs plus official government pages.",
     "category": "PRODUCTIVITY"
   },
