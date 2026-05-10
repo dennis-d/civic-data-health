@@ -26,7 +26,7 @@ class ReportRenderTests(unittest.TestCase):
     def test_help_page_contains_chatgpt_demo_connection_details(self):
         html = render_help_page({"run_id": 7, "fetched_at": "2026-05-09T11:09:51Z"})
 
-        self.assertIn("Connect Public State and Austin City Data Search to ChatGPT", html)
+        self.assertIn("Connect Public Texas State and Austin City Search to ChatGPT", html)
         self.assertIn(PUBLIC_MCP_URL, html)
         self.assertIn("Settings -&gt; Apps &amp; Connectors", html)
         self.assertIn("Settings -&gt; Connectors -&gt; Create", html)
@@ -62,7 +62,7 @@ class ReportRenderTests(unittest.TestCase):
         html = render_submission_page({"run_id": 7, "fetched_at": "2026-05-09T11:09:51Z"})
 
         self.assertIn("ChatGPT App Submission Checklist", html)
-        self.assertIn("Public State and Austin City Data Search", html)
+        self.assertIn("Public Texas State and Austin City Search", html)
         self.assertIn("TX and Austin public data", html)
         self.assertIn(PUBLIC_MCP_URL, html)
         self.assertIn(PRIVACY_URL, html)

@@ -1,10 +1,10 @@
 # ChatGPT App Store Submission
 
-Use this as the dashboard checklist for publishing Public State and Austin City Data Search.
+Use this as the dashboard checklist for publishing Public Texas State and Austin City Search.
 
 ## Dashboard Values
 
-- App name: Public State and Austin City Data Search
+- App name: Public Texas State and Austin City Search
 - Subtitle: TX and Austin public data
 - Category: Productivity
 - MCP URL: https://civic.pagonya.co/mcp
@@ -16,7 +16,7 @@ Use this as the dashboard checklist for publishing Public State and Austin City 
 
 ## Short Description
 
-Public State and Austin City Data Search helps users search State of Texas and City of Austin public datasets, find official permit/license/service starting points, and fetch bounded read-only rows from public Socrata datasets. Austin dataset-health checks are secondary context for quality caveats. The app is independently operated and is not affiliated with or endorsed by the State of Texas or City of Austin.
+Public Texas State and Austin City Search helps users search State of Texas and City of Austin public datasets, find official permit/license/service starting points, and fetch bounded read-only rows from public Socrata datasets. Austin dataset-health checks are secondary context for quality caveats. The app is independently operated and is not affiliated with or endorsed by the State of Texas or City of Austin.
 
 ## Review Notes
 
@@ -39,14 +39,14 @@ Before clicking `Submit for review`, verify:
 
 ## Suggested Screenshots
 
-- ChatGPT answer for: "Using Public State and Austin City Data Search, how do I start a food business permit process in Texas and Austin, and what public datasets can help me research it?"
-- ChatGPT answer for: "Using Public State and Austin City Data Search, find a relevant public permit dataset and show a small row sample from it."
+- ChatGPT answer for: "Using Public Texas State and Austin City Search, how do I start a food business permit process in Texas and Austin, and what public datasets can help me research it?"
+- ChatGPT answer for: "Using Public Texas State and Austin City Search, find a relevant public permit dataset and show a small row sample from it."
 - Optional: the public site at https://civic.pagonya.co/ showing the report and support/privacy links.
 
 ## Dashboard Flow
 
 1. Open https://platform.openai.com/apps-manage.
-2. Create or edit the Public State and Austin City Data Search app draft.
+2. Create or edit the Public Texas State and Austin City Search app draft.
 3. Enter the dashboard values above.
 4. Upload `chatgpt-app-submission.json` if the form supports import, or paste its app info, tool justifications, and test cases manually.
 5. Upload the icon and screenshots.
