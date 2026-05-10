@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import html
 import json
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -45,6 +46,8 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
     privacy_path = out_dir / "privacy.html"
     support_path = out_dir / "support.html"
     submission_path = out_dir / "submission.html"
+    icon_source = Path(__file__).resolve().parents[2] / "assets" / "texas-civic-data-health-icon.png"
+    icon_path = out_dir / "assets" / "texas-civic-data-health-icon.png"
     detail_dir = out_dir / "datasets"
     group_summary = summarize_asset_groups(rows)
 
@@ -67,8 +70,11 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
     privacy_path.write_text(render_privacy_page(summary), encoding="utf-8")
     support_path.write_text(render_support_page(summary), encoding="utf-8")
     submission_path.write_text(render_submission_page(summary), encoding="utf-8")
+    if icon_source.exists():
+        icon_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(icon_source, icon_path)
 
-    return {
+    paths = {
         "json": str(json_path),
         "csv": str(csv_path),
         "html": str(html_path),
@@ -80,6 +86,9 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
         "submission": str(submission_path),
         "details": str(detail_dir),
     }
+    if icon_path.exists():
+        paths["icon"] = str(icon_path)
+    return paths
 
 
 def write_csv(path: Path, rows) -> None:
@@ -622,7 +631,7 @@ def render_help_page(summary: Dict[str, Any]) -> str:
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Connect Texas State Data Search to ChatGPT</title>
+  <title>Connect Public State and Austin City Data Search to ChatGPT</title>
   <style>
     :root {{ color-scheme: light; --ink:#18212f; --muted:#5f6b7a; --line:#d8dee8; --bg:#f4f6f8; --panel:#ffffff; --accent:#0f5f7a; --soft:#e8eef2; }}
     body {{ margin:0; font-family: Georgia, "Times New Roman", serif; color:var(--ink); background:var(--bg); }}
@@ -645,7 +654,7 @@ def render_help_page(summary: Dict[str, Any]) -> str:
   <header>
     <main>
       <p><a href="index.html">Back to report</a> | <a href="methodology.html">Methodology</a> | <a href="privacy.html">Privacy</a> | <a href="support.html">Support</a></p>
-      <h1>Connect Texas State Data Search to ChatGPT</h1>
+      <h1>Connect Public State and Austin City Data Search to ChatGPT</h1>
       <p>This page is for a live demo. The MCP server is public, HTTPS, and read-only. Its primary feature is Texas and Austin public-data search; Austin dataset-quality checks are secondary context.</p>
     </main>
   </header>
@@ -670,7 +679,7 @@ def render_help_page(summary: Dict[str, Any]) -> str:
         <li>Open ChatGPT web and go to <strong>Settings -&gt; Apps &amp; Connectors -&gt; Advanced settings</strong>.</li>
         <li>Turn on <strong>Developer mode</strong>. If your workspace disables it, an admin needs to allow developer mode first.</li>
         <li>Go to <strong>Settings -&gt; Connectors -&gt; Create</strong>.</li>
-        <li>Use <strong>Texas State Data</strong> as the connector name.</li>
+        <li>Use <strong>Public State and Austin City Data Search</strong> as the connector name.</li>
         <li>Use this description: <em>Search State of Texas and Austin public data, find official permit and service starting points, fetch bounded public rows, and use Austin dataset-quality checks as secondary caveats.</em></li>
         <li>Use <code>{mcp_url}</code> as the connector URL.</li>
         <li>Use no authentication for the demo. This server only exposes public, read-only Texas/Austin search tools plus secondary Austin dataset-quality tools.</li>
@@ -725,10 +734,10 @@ curl -sS -X POST {mcp_url} \\
 
 def render_privacy_page(summary: Dict[str, Any]) -> str:
     return render_static_page(
-        title="Privacy Policy - Texas State Data",
+        title="Privacy Policy - Public State and Austin City Data Search",
         heading="Privacy Policy",
         intro=(
-            "Texas State Data is a read-only ChatGPT app and MCP server for public State of Texas "
+            "Public State and Austin City Data Search is a read-only ChatGPT app and MCP server for public State of Texas "
             "and City of Austin data, official government starting links, and Austin dataset-quality caveats."
         ),
         body="""
@@ -785,10 +794,10 @@ def render_privacy_page(summary: Dict[str, Any]) -> str:
 
 def render_support_page(summary: Dict[str, Any]) -> str:
     return render_static_page(
-        title="Support - Texas State Data",
+        title="Support - Public State and Austin City Data Search",
         heading="Support",
         intro=(
-            "Support information for Texas State Data, a read-only public-government data app for ChatGPT."
+            "Support information for Public State and Austin City Data Search, a read-only public-government data app for ChatGPT."
         ),
         body="""
     <div class="panel">
@@ -833,14 +842,14 @@ def render_support_page(summary: Dict[str, Any]) -> str:
 
 def render_submission_page(summary: Dict[str, Any]) -> str:
     return render_static_page(
-        title="Submission Checklist - Texas State Data",
+        title="Submission Checklist - Public State and Austin City Data Search",
         heading="ChatGPT App Submission Checklist",
-        intro="Review-facing launch details for the Texas State Data ChatGPT app.",
+        intro="Review-facing launch details for the Public State and Austin City Data Search ChatGPT app.",
         body="""
     <div class="panel">
       <h2>Dashboard Fields</h2>
       <dl>
-        <dt>App name</dt><dd>Texas State Data</dd>
+        <dt>App name</dt><dd>Public State and Austin City Data Search</dd>
         <dt>Subtitle</dt><dd>TX and Austin public data</dd>
         <dt>Category</dt><dd>Productivity</dd>
         <dt>MCP URL</dt><dd><code>{mcp_url}</code></dd>
@@ -851,17 +860,17 @@ def render_submission_page(summary: Dict[str, Any]) -> str:
     </div>
     <div class="panel">
       <h2>Review Summary</h2>
-      <p>Texas State Data helps users search State of Texas and City of Austin public datasets, find official permit/license/service starting points, and fetch bounded read-only rows from public Socrata datasets. Austin dataset-health checks are secondary context for quality caveats.</p>
+      <p>Public State and Austin City Data Search helps users search State of Texas and City of Austin public datasets, find official permit/license/service starting points, and fetch bounded read-only rows from public Socrata datasets. Austin dataset-health checks are secondary context for quality caveats. The app is independently operated and is not affiliated with or endorsed by the State of Texas or City of Austin.</p>
       <p>The MCP server is read-only, public HTTPS, unauthenticated for review, and exposes explicit read-only, non-destructive, non-open-world annotations on all tools.</p>
     </div>
     <div class="panel">
       <h2>Test Prompts</h2>
       <ul>
-        <li>Using Texas State Data, how do I start a food business permit process in Texas and Austin, and what public datasets can help me research it?</li>
-        <li>Use Texas State Data to show me a starter guide for checking Austin property zoning before I lease a storefront.</li>
-        <li>Use Texas State Data to find State of Texas open datasets about occupational licenses or business permits.</li>
-        <li>Using Texas State Data, find a relevant public permit dataset and show a small row sample from it.</li>
-        <li>Use Texas State Data to submit my Austin building permit application for me.</li>
+        <li>Using Public State and Austin City Data Search, how do I start a food business permit process in Texas and Austin, and what public datasets can help me research it?</li>
+        <li>Use Public State and Austin City Data Search to show me a starter guide for checking Austin property zoning before I lease a storefront.</li>
+        <li>Use Public State and Austin City Data Search to find State of Texas open datasets about occupational licenses or business permits.</li>
+        <li>Using Public State and Austin City Data Search, find a relevant public permit dataset and show a small row sample from it.</li>
+        <li>Use Public State and Austin City Data Search to submit my Austin building permit application for me.</li>
       </ul>
     </div>
     <div class="panel">
