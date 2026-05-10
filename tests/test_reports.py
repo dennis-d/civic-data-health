@@ -2,7 +2,17 @@ from __future__ import annotations
 
 import unittest
 
-from civic_data_health.reports import PUBLIC_MCP_URL, render_detail_page, render_help_page
+from civic_data_health.reports import (
+    PRIVACY_URL,
+    PUBLIC_MCP_URL,
+    SUPPORT_EMAIL,
+    SUPPORT_URL,
+    render_detail_page,
+    render_help_page,
+    render_privacy_page,
+    render_submission_page,
+    render_support_page,
+)
 
 
 class ReportRenderTests(unittest.TestCase):
@@ -18,6 +28,39 @@ class ReportRenderTests(unittest.TestCase):
         self.assertIn("accept: application/json, text/event-stream", html)
         self.assertIn("https://developers.openai.com/apps-sdk/deploy/connect-chatgpt", html)
         self.assertIn("Pagonya LLC", html)
+        self.assertIn(PRIVACY_URL, html)
+        self.assertIn(SUPPORT_URL, html)
+
+    def test_privacy_page_contains_review_required_disclosures(self):
+        html = render_privacy_page({"run_id": 7, "fetched_at": "2026-05-09T11:09:51Z"})
+
+        self.assertIn("Privacy Policy", html)
+        self.assertIn("Tool inputs that ChatGPT sends to the MCP server", html)
+        self.assertIn("Standard hosting and security logs", html)
+        self.assertIn("Do not send Social Security numbers", html)
+        self.assertIn("does not sell personal data", html)
+        self.assertIn("Disconnect the app in ChatGPT settings", html)
+        self.assertIn(SUPPORT_EMAIL, html)
+
+    def test_support_page_contains_public_contact_and_scope(self):
+        html = render_support_page({"run_id": 7, "fetched_at": "2026-05-09T11:09:51Z"})
+
+        self.assertIn("Support", html)
+        self.assertIn(SUPPORT_EMAIL, html)
+        self.assertIn("cannot submit applications", html)
+        self.assertIn(PUBLIC_MCP_URL, html)
+        self.assertIn(PRIVACY_URL, html)
+
+    def test_submission_page_contains_dashboard_fields(self):
+        html = render_submission_page({"run_id": 7, "fetched_at": "2026-05-09T11:09:51Z"})
+
+        self.assertIn("ChatGPT App Submission Checklist", html)
+        self.assertIn("Texas State Data", html)
+        self.assertIn("TX and Austin public data", html)
+        self.assertIn(PUBLIC_MCP_URL, html)
+        self.assertIn(PRIVACY_URL, html)
+        self.assertIn(SUPPORT_URL, html)
+        self.assertIn("OpenAI organization identity verification", html)
 
     def test_detail_page_surfaces_tags_when_category_is_missing(self):
         html = render_detail_page(

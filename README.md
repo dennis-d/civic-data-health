@@ -21,6 +21,9 @@ Outputs:
 - `out/austin_dataset_health.json`
 - `out/methodology.html`
 - `out/help.html`
+- `out/privacy.html`
+- `out/support.html`
+- `out/submission.html`
 - `data/civic_health.sqlite`
 - `data/raw/<timestamp>/data.json`
 - `data/raw/<timestamp>/manifest.json`
@@ -239,6 +242,24 @@ The production paths are:
 - SQLite/cache: `/var/lib/civic-data-health`
 - Static report: `/var/www/civic-data-health`
 - MCP: `127.0.0.1:8787` behind nginx
+
+## ChatGPT App Store Submission
+
+Public review URLs:
+
+- MCP URL: `https://civic.pagonya.co/mcp`
+- Website URL: `https://civic.pagonya.co/`
+- Privacy policy: `https://civic.pagonya.co/privacy.html`
+- Support: `https://civic.pagonya.co/support.html`
+- Submission checklist: `https://civic.pagonya.co/submission.html`
+
+Submission assets:
+
+- Dashboard checklist: `docs/chatgpt-app-store-submission.md`
+- Submission import/test case JSON: `chatgpt-app-submission.json`
+- Icon: `assets/texas-civic-data-health-icon.png`
+
+Before submitting, verify OpenAI organization identity, global data residency for the submitting project, support email delivery, screenshots, and the positive/negative test prompts in ChatGPT web and mobile. After OpenAI approval, publish from the Platform dashboard.
 
 Install or update from GitHub:
 

@@ -11,11 +11,17 @@ from .analysis import asset_group, asset_group_label, summarize_asset_groups, to
 from .category_suggestions import rows_with_category_suggestions
 from .storage import connect, latest_run_id, report_rows, run_summary, skipped_rows
 
-FOOTER = "Prepared by Pagonya LLC using public City of Austin open data. Not affiliated with or endorsed by the City of Austin."
+FOOTER = "Prepared by Pagonya LLC using public State of Texas and City of Austin open data. Not affiliated with or endorsed by the State of Texas or City of Austin."
 SECTION_ORDER = ("active_dataset", "needs_manual_review", "archive_snapshot", "event_specific", "measure", "story_reference")
 PUBLIC_SITE_URL = "https://civic.pagonya.co"
 PUBLIC_MCP_URL = PUBLIC_SITE_URL + "/mcp"
+PRIVACY_URL = PUBLIC_SITE_URL + "/privacy.html"
+SUPPORT_URL = PUBLIC_SITE_URL + "/support.html"
+SUBMISSION_URL = PUBLIC_SITE_URL + "/submission.html"
 OPENAI_CONNECT_DOC_URL = "https://developers.openai.com/apps-sdk/deploy/connect-chatgpt"
+OPENAI_SUBMISSION_DOC_URL = "https://developers.openai.com/apps-sdk/deploy/submission"
+OPENAI_GUIDELINES_DOC_URL = "https://developers.openai.com/apps-sdk/app-submission-guidelines"
+SUPPORT_EMAIL = "support@pagonya.co"
 
 
 def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[int] = None) -> Dict[str, str]:
@@ -36,6 +42,9 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
     index_path = out_dir / "index.html"
     methodology_path = out_dir / "methodology.html"
     help_path = out_dir / "help.html"
+    privacy_path = out_dir / "privacy.html"
+    support_path = out_dir / "support.html"
+    submission_path = out_dir / "submission.html"
     detail_dir = out_dir / "datasets"
     group_summary = summarize_asset_groups(rows)
 
@@ -55,6 +64,9 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
     index_path.write_text(html_text, encoding="utf-8")
     methodology_path.write_text(render_methodology_page(summary), encoding="utf-8")
     help_path.write_text(render_help_page(summary), encoding="utf-8")
+    privacy_path.write_text(render_privacy_page(summary), encoding="utf-8")
+    support_path.write_text(render_support_page(summary), encoding="utf-8")
+    submission_path.write_text(render_submission_page(summary), encoding="utf-8")
 
     return {
         "json": str(json_path),
@@ -63,6 +75,9 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
         "index": str(index_path),
         "methodology": str(methodology_path),
         "help": str(help_path),
+        "privacy": str(privacy_path),
+        "support": str(support_path),
+        "submission": str(submission_path),
         "details": str(detail_dir),
     }
 
@@ -206,6 +221,8 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
         <a href="austin_dataset_health.json">Download JSON</a>
         <a href="methodology.html">Methodology</a>
         <a href="help.html">Connect to ChatGPT</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="support.html">Support</a>
       </div>
       <nav class="tabs" aria-label="Report sections">
         <a href="#active_dataset">Active datasets</a>
@@ -549,7 +566,7 @@ def render_methodology_page(summary: Dict[str, Any]) -> str:
 </head>
 <body>
   <main>
-    <p><a href="index.html">Back to report</a> | <a href="help.html">Connect to ChatGPT</a></p>
+    <p><a href="index.html">Back to report</a> | <a href="help.html">Connect to ChatGPT</a> | <a href="privacy.html">Privacy</a> | <a href="support.html">Support</a></p>
     <h1>Methodology</h1>
     <div class="panel">
       <h2>Classification First</h2>
@@ -627,7 +644,7 @@ def render_help_page(summary: Dict[str, Any]) -> str:
 <body>
   <header>
     <main>
-      <p><a href="index.html">Back to report</a> | <a href="methodology.html">Methodology</a></p>
+      <p><a href="index.html">Back to report</a> | <a href="methodology.html">Methodology</a> | <a href="privacy.html">Privacy</a> | <a href="support.html">Support</a></p>
       <h1>Connect Texas State Data Search to ChatGPT</h1>
       <p>This page is for a live demo. The MCP server is public, HTTPS, and read-only. Its primary feature is Texas and Austin public-data search; Austin dataset-quality checks are secondary context.</p>
     </main>
@@ -687,6 +704,7 @@ curl -sS -X POST {mcp_url} \\
       <h2>After Changes</h2>
       <p>When tools, descriptions, or schemas change, redeploy this server and refresh the connector metadata in ChatGPT under <strong>Settings -&gt; Connectors</strong>.</p>
       <p>Official setup reference: <a href="{docs_url}">OpenAI Apps SDK - Connect from ChatGPT</a>.</p>
+      <p>Public review links: <a href="{privacy_url}">Privacy policy</a>, <a href="{support_url}">Support</a>, and <a href="{submission_url}">submission checklist</a>.</p>
       <p class="muted">Run {run_id}, fetched {fetched_at}. {footer}</p>
     </div>
   </main>
@@ -696,10 +714,226 @@ curl -sS -X POST {mcp_url} \\
         mcp_url=escape(PUBLIC_MCP_URL),
         site_url=escape(PUBLIC_SITE_URL),
         docs_url=escape(OPENAI_CONNECT_DOC_URL),
+        privacy_url=escape(PRIVACY_URL),
+        support_url=escape(SUPPORT_URL),
+        submission_url=escape(SUBMISSION_URL),
         run_id=summary["run_id"],
         fetched_at=escape(summary["fetched_at"]),
         footer=escape(FOOTER),
     )
+
+
+def render_privacy_page(summary: Dict[str, Any]) -> str:
+    return render_static_page(
+        title="Privacy Policy - Texas State Data",
+        heading="Privacy Policy",
+        intro=(
+            "Texas State Data is a read-only ChatGPT app and MCP server for public State of Texas "
+            "and City of Austin data, official government starting links, and Austin dataset-quality caveats."
+        ),
+        body="""
+    <div class="panel">
+      <h2>Data We Process</h2>
+      <ul>
+        <li>Tool inputs that ChatGPT sends to the MCP server, such as a public-government question, dataset id, jurisdiction, limit, date range, or selected public columns.</li>
+        <li>Public government data fetched from sources such as data.texas.gov, data.austintexas.gov, and official Texas or Austin government pages.</li>
+        <li>Standard hosting and security logs may include request metadata such as IP address, user agent, timestamp, and requested path.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h2>Data We Do Not Need</h2>
+      <p>Do not send Social Security numbers, payment data, account passwords, API keys, MFA codes, precise home addresses, medical details, or other sensitive personal data. The app is not designed to collect or process those categories.</p>
+    </div>
+    <div class="panel">
+      <h2>How We Use Data</h2>
+      <ul>
+        <li>Answer Texas and Austin public-data, permit-starting-point, license, service, and governance questions.</li>
+        <li>Fetch bounded read-only rows from public Socrata datasets when the user asks for public examples.</li>
+        <li>Maintain public Austin dataset-health reports and service reliability.</li>
+        <li>Diagnose uptime, abuse, or security issues for the public MCP endpoint.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h2>Sharing and Recipients</h2>
+      <p>The app returns results inside ChatGPT. It may query public government data APIs and official public pages to answer the user's request. It does not sell personal data, serve ads, submit forms, send messages, or modify government systems.</p>
+    </div>
+    <div class="panel">
+      <h2>Retention</h2>
+      <p>The application database stores public catalog snapshots, public report outputs, and derived quality analysis. It is not designed to store user profiles or private user records. Hosting logs are used for operations and security and may be rotated or deleted during normal maintenance.</p>
+    </div>
+    <div class="panel">
+      <h2>User Controls</h2>
+      <ul>
+        <li>Disconnect the app in ChatGPT settings if you do not want ChatGPT to call this MCP server.</li>
+        <li>Avoid including sensitive personal data in prompts or tool inputs.</li>
+        <li>Contact support for privacy or data-handling questions.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h2>Contact</h2>
+      <p>Email <a href="mailto:{support_email}">{support_email}</a> for privacy or support questions.</p>
+      <p class="muted">Last updated May 10, 2026. Run {run_id}, fetched {fetched_at}. {footer}</p>
+    </div>
+""".format(
+            support_email=escape(SUPPORT_EMAIL),
+            run_id=summary["run_id"],
+            fetched_at=escape(summary["fetched_at"]),
+            footer=escape(FOOTER),
+        ),
+    )
+
+
+def render_support_page(summary: Dict[str, Any]) -> str:
+    return render_static_page(
+        title="Support - Texas State Data",
+        heading="Support",
+        intro=(
+            "Support information for Texas State Data, a read-only public-government data app for ChatGPT."
+        ),
+        body="""
+    <div class="panel">
+      <h2>Contact</h2>
+      <p>Email <a href="mailto:{support_email}">{support_email}</a> for app support, privacy questions, broken links, incorrect public-data matches, or MCP availability problems.</p>
+      <p>Do not include Social Security numbers, payment data, passwords, API keys, MFA codes, medical details, or other sensitive personal data in support requests.</p>
+    </div>
+    <div class="panel">
+      <h2>Scope</h2>
+      <p>The app can search public Texas and Austin datasets, return official permit/license/service starting links, fetch bounded public rows, and explain Austin dataset-quality caveats. It cannot submit applications, file complaints, send email, update public records, or guarantee legal permit requirements.</p>
+    </div>
+    <div class="panel">
+      <h2>Status Checks</h2>
+      <ul>
+        <li>Public site: <a href="{site_url}">{site_url}</a></li>
+        <li>MCP endpoint: <code>{mcp_url}</code></li>
+        <li>Health endpoint: <a href="{health_url}">{health_url}</a></li>
+        <li>Privacy policy: <a href="{privacy_url}">{privacy_url}</a></li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h2>Helpful Issue Details</h2>
+      <ul>
+        <li>The prompt or workflow you tried, with sensitive details removed.</li>
+        <li>The dataset id, agency, permit type, or service you expected.</li>
+        <li>Whether the issue happened in ChatGPT web, mobile, or direct MCP testing.</li>
+      </ul>
+      <p class="muted">Run {run_id}, fetched {fetched_at}. {footer}</p>
+    </div>
+""".format(
+            support_email=escape(SUPPORT_EMAIL),
+            site_url=escape(PUBLIC_SITE_URL),
+            mcp_url=escape(PUBLIC_MCP_URL),
+            health_url=escape(PUBLIC_MCP_URL + "/health"),
+            privacy_url=escape(PRIVACY_URL),
+            run_id=summary["run_id"],
+            fetched_at=escape(summary["fetched_at"]),
+            footer=escape(FOOTER),
+        ),
+    )
+
+
+def render_submission_page(summary: Dict[str, Any]) -> str:
+    return render_static_page(
+        title="Submission Checklist - Texas State Data",
+        heading="ChatGPT App Submission Checklist",
+        intro="Review-facing launch details for the Texas State Data ChatGPT app.",
+        body="""
+    <div class="panel">
+      <h2>Dashboard Fields</h2>
+      <dl>
+        <dt>App name</dt><dd>Texas State Data</dd>
+        <dt>Subtitle</dt><dd>TX and Austin public data</dd>
+        <dt>Category</dt><dd>Productivity</dd>
+        <dt>MCP URL</dt><dd><code>{mcp_url}</code></dd>
+        <dt>Website URL</dt><dd><a href="{site_url}">{site_url}</a></dd>
+        <dt>Privacy policy URL</dt><dd><a href="{privacy_url}">{privacy_url}</a></dd>
+        <dt>Support URL</dt><dd><a href="{support_url}">{support_url}</a></dd>
+      </dl>
+    </div>
+    <div class="panel">
+      <h2>Review Summary</h2>
+      <p>Texas State Data helps users search State of Texas and City of Austin public datasets, find official permit/license/service starting points, and fetch bounded read-only rows from public Socrata datasets. Austin dataset-health checks are secondary context for quality caveats.</p>
+      <p>The MCP server is read-only, public HTTPS, unauthenticated for review, and exposes explicit read-only, non-destructive, non-open-world annotations on all tools.</p>
+    </div>
+    <div class="panel">
+      <h2>Test Prompts</h2>
+      <ul>
+        <li>Using Texas State Data, how do I start a food business permit process in Texas and Austin, and what public datasets can help me research it?</li>
+        <li>Use Texas State Data to show me a starter guide for checking Austin property zoning before I lease a storefront.</li>
+        <li>Use Texas State Data to find State of Texas open datasets about occupational licenses or business permits.</li>
+        <li>Using Texas State Data, find a relevant public permit dataset and show a small row sample from it.</li>
+        <li>Use Texas State Data to submit my Austin building permit application for me.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h2>Manual Checks Before Submit</h2>
+      <ul>
+        <li>OpenAI organization identity verification is complete for the publishing name.</li>
+        <li>The submitting project uses global data residency, not EU data residency.</li>
+        <li>The support email receives mail.</li>
+        <li>Screenshots show real ChatGPT results for service-guide search and public dataset row retrieval.</li>
+        <li>Positive and negative test prompts pass in ChatGPT web and mobile.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h2>OpenAI References</h2>
+      <ul>
+        <li><a href="{submission_doc_url}">Submit and maintain your app</a></li>
+        <li><a href="{guidelines_doc_url}">App submission guidelines</a></li>
+      </ul>
+      <p class="muted">Run {run_id}, fetched {fetched_at}. {footer}</p>
+    </div>
+""".format(
+            mcp_url=escape(PUBLIC_MCP_URL),
+            site_url=escape(PUBLIC_SITE_URL),
+            privacy_url=escape(PRIVACY_URL),
+            support_url=escape(SUPPORT_URL),
+            submission_doc_url=escape(OPENAI_SUBMISSION_DOC_URL),
+            guidelines_doc_url=escape(OPENAI_GUIDELINES_DOC_URL),
+            run_id=summary["run_id"],
+            fetched_at=escape(summary["fetched_at"]),
+            footer=escape(FOOTER),
+        ),
+    )
+
+
+def render_static_page(*, title: str, heading: str, intro: str, body: str) -> str:
+    return """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title}</title>
+  <style>
+    :root {{ color-scheme: light; --ink:#18212f; --muted:#5f6b7a; --line:#d8dee8; --bg:#f4f6f8; --panel:#ffffff; --accent:#0f5f7a; --soft:#e8eef2; }}
+    body {{ margin:0; font-family: Georgia, "Times New Roman", serif; color:var(--ink); background:var(--bg); }}
+    header {{ background:var(--soft); border-bottom:1px solid var(--line); }}
+    main {{ max-width:940px; margin:0 auto; padding:28px 18px 44px; }}
+    h1 {{ margin:0 0 10px; font-size:clamp(30px, 5vw, 48px); letter-spacing:0; }}
+    h2 {{ margin:0 0 10px; }}
+    p {{ line-height:1.5; }}
+    a {{ color:var(--accent); }}
+    dt {{ font-weight:700; margin-top:10px; }}
+    dd {{ margin:3px 0 8px; }}
+    .panel {{ background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:18px; margin:14px 0; }}
+    .muted {{ color:var(--muted); }}
+    code {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break:break-all; }}
+    li {{ margin:8px 0; }}
+  </style>
+</head>
+<body>
+  <header>
+    <main>
+      <p><a href="index.html">Back to report</a> | <a href="help.html">Connect to ChatGPT</a> | <a href="privacy.html">Privacy</a> | <a href="support.html">Support</a></p>
+      <h1>{heading}</h1>
+      <p>{intro}</p>
+    </main>
+  </header>
+  <main>
+{body}
+  </main>
+</body>
+</html>
+""".format(title=escape(title), heading=escape(heading), intro=escape(intro), body=body)
 
 
 def escape(value: Any) -> str:
