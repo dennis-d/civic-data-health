@@ -71,6 +71,16 @@ def build_test_db(db_path: Path) -> None:
 
 
 class MCPServerTests(unittest.TestCase):
+    def test_tool_descriptions_make_search_primary_and_quality_secondary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mcp = create_mcp(Path(tmp) / "civic.sqlite", "127.0.0.1", 0)
+            tools = {tool.name: tool for tool in asyncio.run(mcp.list_tools())}
+
+            self.assertIn("Primary search tool", tools["ask_texas_government_question"].description)
+            self.assertIn("Primary catalog search", tools["search_public_data_catalogs"].description)
+            self.assertIn("Secondary dataset-quality tool", tools["get_report_summary"].description)
+            self.assertIn("Secondary citation-friendly search", tools["search"].description)
+
     def test_search_and_fetch_advertise_compatibility_output_schemas(self):
         with tempfile.TemporaryDirectory() as tmp:
             mcp = create_mcp(Path(tmp) / "civic.sqlite", "127.0.0.1", 0)

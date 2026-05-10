@@ -4,7 +4,7 @@
   "app_info": {
     "display_name": "Texas State Data",
     "subtitle": "TX and Austin public data",
-    "description": "Texas State Data helps users find State of Texas and City of Austin public datasets, fetch bounded read-only rows from public Socrata datasets, locate official starting links for permits, licenses, services, and governance questions, and inspect Austin dataset health. The app is read-only and uses public Texas/Austin open-data catalogs plus official government pages.",
+    "description": "Texas State Data is primarily for searching State of Texas and City of Austin public datasets, finding official permit/license/service starting points, and fetching bounded read-only rows from public Socrata datasets. Austin dataset health and metadata quality checks are secondary context for caveats, stewardship issues, and cleanup guidance. The app is read-only and uses public Texas/Austin open-data catalogs plus official government pages.",
     "category": "PRODUCTIVITY"
   },
   "tools": {
@@ -427,7 +427,7 @@
       "expected_output_url": null
     },
     {
-      "description": "Review Austin metadata cleanup opportunities.",
+      "description": "Use secondary Austin metadata-quality tools when explicitly requested.",
       "user_prompt": "Use Texas State Data to show the top actionable metadata fixes for active Austin datasets.",
       "file_attachment_urls": null,
       "tools_triggered": "get_top_actionable_fixes",
@@ -435,7 +435,7 @@
       "expected_output_url": null
     },
     {
-      "description": "Search catalog and schema knowledge for Austin services.",
+      "description": "Search Austin service data first, then include quality caveats.",
       "user_prompt": "Use Texas State Data to find Austin homelessness service datasets and include schema or field caveats when available.",
       "file_attachment_urls": null,
       "tools_triggered": "search_city_knowledge, fetch_city_knowledge",

@@ -1,8 +1,8 @@
 # Civic Data Health
 
-Deterministic Austin Open Data health reports with a read-only MCP endpoint.
+Read-only Texas and Austin public data search with secondary Austin dataset-quality checks.
 
-V1 uses only public City of Austin catalog data from `https://data.austintexas.gov/data.json`. It fetches the catalog once, stores raw snapshots and normalized rows in SQLite, scores dataset metadata, exports static report files, and serves MCP tools from SQLite.
+The primary workflow is helping people search State of Texas and City of Austin public datasets, find official permit/license/service starting points, and fetch bounded public rows from known Socrata datasets. The secondary workflow scores Austin dataset metadata, exports static quality reports, and serves those quality/caveat tools from SQLite.
 
 ## Local Run
 
@@ -55,7 +55,27 @@ curl -sS -X POST http://127.0.0.1:8787/mcp \
   --data '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
-Tools:
+Primary search and service tools:
+
+- `ask_texas_government_question`
+- `ask_civic_data_question`
+- `search_public_data_catalogs`
+- `find_government_service_resources`
+- `query_public_dataset_rows`
+- `ask_austin_data_question`
+- `ask_city_data_question`
+- `find_city_datasets_for_question`
+- `search_city_knowledge`
+- `search_dataset_columns`
+- `find_answerable_datasets`
+- `get_dataset_capabilities`
+- `fetch_city_knowledge`
+- `get_dataset_schema`
+- `get_sample_rows`
+- `query_dataset_count`
+- `query_dataset_rows`
+
+Secondary dataset-quality tools:
 
 - `get_report_summary`
 - `list_high_risk_datasets`
@@ -69,16 +89,6 @@ Tools:
 - `list_missing_category_suggestions`
 - `explain_dataset_issue`
 - `draft_department_email`
-- `ask_city_data_question`
-- `find_city_datasets_for_question`
-- `get_dataset_capabilities`
-- `search_dataset_columns`
-- `find_answerable_datasets`
-- `search_city_knowledge`
-- `fetch_city_knowledge`
-- `get_dataset_schema`
-- `get_sample_rows`
-- `query_dataset_count`
 - `search_datasets`
 - `search`
 - `fetch`
@@ -153,7 +163,7 @@ The plugin points Codex at the hosted MCP server:
 codex mcp add civic-data-health --url https://civic.pagonya.co/mcp
 ```
 
-For public-facing discovery, use `ask_city_data_question` first. It accepts plain-English questions like "Where can I find police calls?" or "What data shows building permits?" and returns ranked datasets, match reasons, quality caveats, and usable links.
+For public-facing discovery, use `ask_civic_data_question` or `ask_texas_government_question` first. They accept plain-English questions like "How do I start a food business permit process in Texas and Austin?" or "What data shows building permits?" and return official links, ranked datasets, bounded public rows when useful, quality caveats, and usable links.
 
 ## Row-Level Answers
 
@@ -182,9 +192,9 @@ Set `SOCRATA_APP_TOKEN` in the service environment if public traffic grows; unau
 
 ## Texas and Austin Government Data
 
-The MCP also exposes a public-government helper for people who want to find useful Texas or Austin government data and official starting points for permits, licenses, services, and governance questions.
+The MCP's primary feature is public-government search for people who want to find useful Texas or Austin government data and official starting points for permits, licenses, services, and governance questions.
 
-Main tools:
+Primary tools:
 
 - `ask_texas_government_question`: searches official Texas/Austin service resources and public open-data catalogs, then includes bounded public rows from matching queryable Socrata datasets when useful.
 - `search_public_data_catalogs`: searches `https://data.texas.gov/data.json` and `https://data.austintexas.gov/data.json`.

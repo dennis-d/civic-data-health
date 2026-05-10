@@ -605,7 +605,7 @@ def render_help_page(summary: Dict[str, Any]) -> str:
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Connect to ChatGPT - Civic Data Health</title>
+  <title>Connect Texas State Data Search to ChatGPT</title>
   <style>
     :root {{ color-scheme: light; --ink:#18212f; --muted:#5f6b7a; --line:#d8dee8; --bg:#f4f6f8; --panel:#ffffff; --accent:#0f5f7a; --soft:#e8eef2; }}
     body {{ margin:0; font-family: Georgia, "Times New Roman", serif; color:var(--ink); background:var(--bg); }}
@@ -628,8 +628,8 @@ def render_help_page(summary: Dict[str, Any]) -> str:
   <header>
     <main>
       <p><a href="index.html">Back to report</a> | <a href="methodology.html">Methodology</a></p>
-      <h1>Connect Civic Data Health to ChatGPT</h1>
-      <p>This page is for a live demo. The MCP server is public, HTTPS, and read-only, so ChatGPT can connect to it directly without a localhost tunnel.</p>
+      <h1>Connect Texas State Data Search to ChatGPT</h1>
+      <p>This page is for a live demo. The MCP server is public, HTTPS, and read-only. Its primary feature is Texas and Austin public-data search; Austin dataset-quality checks are secondary context.</p>
     </main>
   </header>
   <main>
@@ -653,21 +653,21 @@ def render_help_page(summary: Dict[str, Any]) -> str:
         <li>Open ChatGPT web and go to <strong>Settings -&gt; Apps &amp; Connectors -&gt; Advanced settings</strong>.</li>
         <li>Turn on <strong>Developer mode</strong>. If your workspace disables it, an admin needs to allow developer mode first.</li>
         <li>Go to <strong>Settings -&gt; Connectors -&gt; Create</strong>.</li>
-        <li>Use <strong>Civic Data Health</strong> as the connector name.</li>
-        <li>Use this description: <em>Ask questions about Austin open data, find relevant datasets, inspect dataset health, schemas, sample rows, and data quality issues.</em></li>
+        <li>Use <strong>Texas State Data</strong> as the connector name.</li>
+        <li>Use this description: <em>Search State of Texas and Austin public data, find official permit and service starting points, fetch bounded public rows, and use Austin dataset-quality checks as secondary caveats.</em></li>
         <li>Use <code>{mcp_url}</code> as the connector URL.</li>
-        <li>Use no authentication for the demo. This server only exposes public, read-only Austin open data tools.</li>
+        <li>Use no authentication for the demo. This server only exposes public, read-only Texas/Austin search tools plus secondary Austin dataset-quality tools.</li>
         <li>Click <strong>Create</strong>. ChatGPT should show the tool list advertised by the MCP server.</li>
       </ol>
     </div>
     <div class="panel">
       <h2>Demo Prompts</h2>
       <ul>
-        <li>Find Austin datasets about building permits and tell me which one is best for answering permit volume questions.</li>
-        <li>How many building permits were issued in 2025?</li>
-        <li>Which active Austin datasets have the most actionable metadata fixes?</li>
-        <li>Find datasets related to homelessness services and show data quality caveats.</li>
-        <li>Show the schema and a few sample rows for a relevant public safety dataset.</li>
+        <li>How do I start a food business permit process in Texas and Austin, and what public datasets can help me research it?</li>
+        <li>Find State of Texas open datasets about occupational licenses or business permits.</li>
+        <li>Find Austin datasets about building permits and show a small public row sample.</li>
+        <li>How many building permits were issued in Austin in 2025?</li>
+        <li>After finding relevant datasets, show any Austin dataset-quality caveats.</li>
       </ul>
     </div>
     <div class="panel">

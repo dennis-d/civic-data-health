@@ -72,9 +72,10 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
     mcp = FastMCP(
         name="civic-data-health",
         instructions=(
-            "Read-only Texas and Austin public government data helper. Use these tools "
-            "to find public datasets, fetch bounded public rows, summarize Austin dataset "
-            "health, and route permit or government-service questions to official sources."
+            "Read-only Texas and Austin public government search assistant. Primary use: "
+            "find official service resources, permit/license starting points, public "
+            "datasets, and bounded public rows. Secondary use: Austin dataset-quality "
+            "and health-report context for caveats, stewardship issues, and metadata fixes."
         ),
         website_url="https://civic.pagonya.co/",
         host=host,
@@ -90,7 +91,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Get Report Summary",
-        description="Use this when you need the latest Austin civic data health summary and top risks.",
+        description="Secondary dataset-quality tool for the latest Austin civic data health summary and top risks.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -109,7 +110,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="List High Risk Datasets",
-        description="Use this when you need the highest-risk active datasets from the latest report.",
+        description="Secondary dataset-quality tool for the highest-risk active datasets from the latest Austin report.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -122,7 +123,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Get Top Actionable Fixes",
-        description="Use this when you need the highest-impact metadata cleanup opportunities for a city data steward.",
+        description="Secondary dataset-quality tool for the highest-impact metadata cleanup opportunities for a city data steward.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -140,7 +141,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Compare Asset Types",
-        description="Use this when you need to compare active datasets, archives, event records, Socrata measures, and story/reference assets.",
+        description="Secondary dataset-quality tool for comparing active datasets, archives, event records, Socrata measures, and story/reference assets.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -153,7 +154,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="List Classification Review Candidates",
-        description="Use this when you need records that require human classification before they are treated as active risks.",
+        description="Secondary dataset-quality tool for records that require human classification before they are treated as active risks.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -166,7 +167,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Get Classification Methodology",
-        description="Use this when you need to explain how the report classifies active datasets, archives, events, measures, and story assets.",
+        description="Secondary dataset-quality tool for explaining how the report classifies active datasets, archives, events, measures, and story assets.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -197,7 +198,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="List Datasets By Asset Group",
-        description="Use this when you need examples from one report section, optionally filtered by label.",
+        description="Secondary dataset-quality tool for examples from one report section, optionally filtered by label.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -222,7 +223,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Get Dataset Health",
-        description="Use this when you have a Socrata dataset id and need its score, issue codes, and remediation.",
+        description="Secondary dataset-quality tool for a known Socrata dataset id's score, issue codes, and remediation.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -239,7 +240,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Suggest Dataset Category",
-        description="Use this when a dataset has a missing category and you need the trained category suggestion with evidence.",
+        description="Secondary dataset-quality tool for a missing-category dataset's trained category suggestion with evidence.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -263,7 +264,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="List Missing Category Suggestions",
-        description="Use this when you need missing-category records with trained category suggestions, confidence, and evidence.",
+        description="Secondary dataset-quality tool for missing-category records with trained category suggestions, confidence, and evidence.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -290,7 +291,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Explain Dataset Issue",
-        description="Use this when you need plain-English explanations and recommended actions for one dataset's issue codes.",
+        description="Secondary dataset-quality tool for plain-English explanations and recommended actions for one dataset's issue codes.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -307,7 +308,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Draft Department Email",
-        description="Use this when you need a draft outreach email for a department owner; this only drafts text and does not send anything.",
+        description="Secondary dataset-quality tool for drafting department-owner outreach text; this only drafts and does not send anything.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -324,7 +325,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Search Datasets",
-        description="Use this when you need to search Austin report rows by title, description, id, asset type, or issue code.",
+        description="Secondary Austin report search for dataset-quality rows by title, description, id, asset type, or issue code.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -333,7 +334,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Ask City Data Question",
-        description="Use this when a person asks a plain-English question and needs the best Austin open datasets to answer it.",
+        description="Primary Austin-only search tool for plain-English questions that need the best Austin open datasets and caveats.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -352,7 +353,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Ask Texas Government Question",
-        description="Use this when a person asks for State of Texas or Austin government data, permit starting points, licenses, public services, governance information, or dataset-backed examples.",
+        description="Primary search tool for State of Texas or Austin government data, permit starting points, licenses, public services, governance information, or dataset-backed examples.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -369,7 +370,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Ask Civic Data Question",
-        description="Use this when a person asks for Texas or Austin service, permit, governance, or open-data information and needs official links plus dataset-backed public rows.",
+        description="Primary search tool for Texas or Austin service, permit, governance, or open-data questions needing official links plus dataset-backed public rows.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -381,7 +382,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Search Public Data Catalogs",
-        description="Use this when you need matching State of Texas or Austin public open-data catalog records for a topic, service, permit, agency, or governance question.",
+        description="Primary catalog search for matching State of Texas or Austin public open-data records by topic, service, permit, agency, or governance question.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -397,7 +398,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Find Government Service Resources",
-        description="Use this when a person asks where to start a Texas or Austin permit, license, business, or government-service process.",
+        description="Primary service search for official Texas or Austin permit, license, business, or government-service starting points.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -413,7 +414,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Query Public Dataset Rows",
-        description="Use this when you need actual public rows from a known State of Texas or Austin Socrata dataset. This is read-only, validates selected columns, and returns a bounded row set.",
+        description="Use after search identifies a known State of Texas or Austin Socrata dataset; returns bounded read-only public rows with validated columns.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -474,7 +475,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Ask Austin Data Question",
-        description="Use this when a person specifically asks an Austin open-data question and needs Austin report ranking, schema checks, and bounded live public rows.",
+        description="Primary Austin open-data search for Austin questions needing report ranking, schema checks, and bounded live public rows.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -533,7 +534,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Find City Datasets",
-        description="Use this when you need ranked Austin open datasets for a civic topic, service, department, or question.",
+        description="Primary Austin dataset search for ranked open-data candidates for a civic topic, service, department, or question.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -552,7 +553,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Get Dataset Capabilities",
-        description="Use this when you need to know whether a dataset has date, geography, numeric, text, or categorical fields.",
+        description="Use after search identifies a dataset to check whether it has date, geography, numeric, text, or categorical fields.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -569,7 +570,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Search Dataset Columns",
-        description="Use this when you need datasets whose schema has fields like council district, issue date, latitude, status, amount, or permit type.",
+        description="Primary Austin schema search for datasets with fields like council district, issue date, latitude, status, amount, or permit type.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -584,7 +585,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Find Answerable Datasets",
-        description="Use this when you need datasets that can answer a question based on schema capabilities like date, geography, and count support.",
+        description="Primary Austin answerability search for datasets that can answer a question based on schema capabilities like date, geography, and count support.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -599,7 +600,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Search City Knowledge",
-        description="Use this for a combined city-data knowledge search over catalog records and matching dataset columns.",
+        description="Primary Austin knowledge search over catalog records and matching dataset columns.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -624,7 +625,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Fetch City Knowledge",
-        description="Use this when you need the full health, classification, category suggestion, and schema capabilities for one city dataset.",
+        description="Use after Austin search identifies a dataset; returns schema capabilities plus secondary health, classification, and category context.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -664,7 +665,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Get Dataset Schema",
-        description="Use this when you need column names and types for a known Austin Socrata dataset id.",
+        description="Use after search identifies a known Austin Socrata dataset id; returns column names and types.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -681,7 +682,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Get Sample Rows",
-        description="Use this when you need a small live sample from a known Austin Socrata dataset id.",
+        description="Use after search identifies a known Austin Socrata dataset id; returns a small live sample.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -703,7 +704,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Query Dataset Rows",
-        description="Use this when you need actual public rows from a known Austin Socrata dataset for a service, governance, or operational question. This is read-only, validates selected columns, and returns a bounded row set.",
+        description="Use after search identifies a known Austin Socrata dataset for a service, governance, or operational question; returns bounded read-only rows with validated columns.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -764,7 +765,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         title="Query Dataset Count",
-        description="Use this for a safe read-only count over one known Austin Socrata dataset, optionally bounded by a validated date column.",
+        description="Use after search identifies one known Austin Socrata dataset; returns a safe read-only count optionally bounded by a validated date column.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -800,8 +801,8 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         name="search",
-        title="Search Civic Data Health",
-        description="Use this when ChatGPT needs citation-friendly search results from the civic data health report.",
+        title="Search Dataset Quality Records",
+        description="Secondary citation-friendly search over Austin dataset-quality report records.",
         annotations=READ_ONLY,
         structured_output=True,
     )
@@ -820,8 +821,8 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
 
     @mcp.tool(
         name="fetch",
-        title="Fetch Civic Data Health Record",
-        description="Use this when ChatGPT needs the full citation-friendly text for one dataset health record.",
+        title="Fetch Dataset Quality Record",
+        description="Secondary citation-friendly fetch for one Austin dataset-quality report record.",
         annotations=READ_ONLY,
         structured_output=True,
     )
