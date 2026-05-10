@@ -2,9 +2,9 @@
   "$schema": "https://developers.openai.com/apps-sdk/schemas/chatgpt-app-submission.v1.json",
   "schema_version": 1,
   "app_info": {
-    "display_name": "Civic Data Health",
-    "subtitle": "Audit Austin open data",
-    "description": "Civic Data Health helps users find City of Austin open datasets, inspect metadata health, compare quality risks, review schemas and sample rows, and answer conservative row-count questions against public Socrata data. The app is read-only and uses public Austin open-data catalog and dataset APIs.",
+    "display_name": "Texas State Data",
+    "subtitle": "TX and Austin public data",
+    "description": "Texas State Data helps users find State of Texas and City of Austin public datasets, fetch bounded read-only rows from public Socrata datasets, locate official starting links for permits, licenses, services, and governance questions, and inspect Austin dataset health. The app is read-only and uses public Texas/Austin open-data catalogs plus official government pages.",
     "category": "PRODUCTIVITY"
   },
   "tools": {
@@ -307,60 +307,144 @@
         "open_world_justification": "Only reads local report data and returns results inside ChatGPT.",
         "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
       }
+    },
+    "ask_texas_government_question": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Searches public Texas/Austin service resources and datasets and may fetch bounded public rows without changing anything.",
+        "open_world_justification": "Only reads public Texas/Austin sources and returns results inside ChatGPT.",
+        "destructive_justification": "Does not submit permit applications, send messages, publish data, or modify any government system."
+      }
+    },
+    "ask_civic_data_question": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Answers Texas/Austin civic data questions from public links, catalog records, and bounded read-only row samples.",
+        "open_world_justification": "Only reads public Texas/Austin sources and returns results inside ChatGPT.",
+        "destructive_justification": "Does not submit forms, send messages, publish content, or change any external system."
+      }
+    },
+    "search_public_data_catalogs": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Searches public Texas and Austin DCAT catalog records without changing catalog metadata.",
+        "open_world_justification": "Only reads public catalog JSON and returns matches inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, submit, or modify public records."
+      }
+    },
+    "find_government_service_resources": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Returns curated official Texas/Austin government starting links without contacting agencies or submitting requests.",
+        "open_world_justification": "Only returns public official resource links inside ChatGPT.",
+        "destructive_justification": "Does not send messages, submit forms, or create applications."
+      }
+    },
+    "query_public_dataset_rows": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Fetches bounded public rows from a known Texas or Austin Socrata dataset with validated optional columns and date filters.",
+        "open_world_justification": "Only reads public Socrata APIs and returns rows inside ChatGPT.",
+        "destructive_justification": "Does not write to Socrata, submit forms, or alter public data."
+      }
+    },
+    "ask_austin_data_question": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Answers Austin-specific data questions from the report, schema checks, and bounded public Socrata rows.",
+        "open_world_justification": "Only reads public Austin/Socrata data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not modify Austin catalog metadata or source datasets."
+      }
+    },
+    "query_dataset_rows": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Fetches bounded public rows from a known Austin Socrata dataset with validated optional columns and date filters.",
+        "open_world_justification": "Only reads public Austin Socrata APIs and returns rows inside ChatGPT.",
+        "destructive_justification": "Does not write to Socrata or alter source datasets."
+      }
     }
   },
   "test_cases": [
     {
-      "description": "Find the best Austin datasets for a civic data question.",
-      "user_prompt": "Use Civic Data Health to find Austin datasets about building permits and explain which one is best for permit volume questions.",
+      "description": "Find official permit starting points plus relevant Texas/Austin data.",
+      "user_prompt": "Using Texas State Data, how do I start a food business permit process in Texas and Austin, and what public datasets can help me research it?",
       "file_attachment_urls": null,
-      "tools_triggered": "ask_city_data_question",
-      "expected_output": "Returns ranked Austin building permit datasets with source links, quality caveats, and a recommendation for permit volume analysis.",
+      "tools_triggered": "ask_texas_government_question",
+      "expected_output": "Returns official Texas and Austin permit or license starting links, relevant public catalog datasets, bounded row samples when useful, and caveats that requirements depend on agency, locality, activity, property, and project scope.",
       "expected_output_url": null
     },
     {
-      "description": "Answer a conservative row-count question from public Socrata data.",
-      "user_prompt": "Using Civic Data Health, how many building permits were issued in Austin in 2025?",
+      "description": "Search State of Texas public data by user interest.",
+      "user_prompt": "Use Texas State Data to find State of Texas open datasets about occupational licenses or business permits.",
       "file_attachment_urls": null,
-      "tools_triggered": "ask_city_data_question",
-      "expected_output": "Identifies the relevant dataset, applies a validated date field when available, returns a count, source URL, and caveats.",
+      "tools_triggered": "search_public_data_catalogs",
+      "expected_output": "Returns matching State of Texas catalog records with titles, descriptions, dataset ids when available, source links, and queryability status.",
       "expected_output_url": null
     },
     {
-      "description": "Review the highest-impact metadata cleanup opportunities.",
-      "user_prompt": "Use Civic Data Health to show the top actionable metadata fixes for active Austin datasets.",
+      "description": "Fetch actual bounded public rows from a known Texas or Austin dataset.",
+      "user_prompt": "Using Texas State Data, find a relevant public permit dataset and show a small row sample from it.",
+      "file_attachment_urls": null,
+      "tools_triggered": "search_public_data_catalogs, query_public_dataset_rows",
+      "expected_output": "Finds a relevant queryable public Socrata dataset, validates the dataset id/source, returns a small bounded row sample, and includes the public API source URL.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Answer a conservative Austin row-count question from public Socrata data.",
+      "user_prompt": "Using Texas State Data, how many building permits were issued in Austin in 2025?",
+      "file_attachment_urls": null,
+      "tools_triggered": "ask_city_data_question",
+      "expected_output": "Identifies the relevant Austin dataset, applies a validated date field when available, returns a count, source URL, and caveats.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Review Austin metadata cleanup opportunities.",
+      "user_prompt": "Use Texas State Data to show the top actionable metadata fixes for active Austin datasets.",
       "file_attachment_urls": null,
       "tools_triggered": "get_top_actionable_fixes",
-      "expected_output": "Lists active datasets with issue codes, remediation guidance, scores, labels, and public source links.",
+      "expected_output": "Lists active Austin datasets with issue codes, remediation guidance, scores, labels, and public source links.",
       "expected_output_url": null
     },
     {
-      "description": "Search catalog and schema knowledge together.",
-      "user_prompt": "Use Civic Data Health to find Austin homelessness service datasets and include schema or field caveats when available.",
+      "description": "Search catalog and schema knowledge for Austin services.",
+      "user_prompt": "Use Texas State Data to find Austin homelessness service datasets and include schema or field caveats when available.",
       "file_attachment_urls": null,
       "tools_triggered": "search_city_knowledge, fetch_city_knowledge",
-      "expected_output": "Returns relevant datasets, matching schema fields when available, health labels, and caveats about data quality or answerability.",
+      "expected_output": "Returns relevant Austin datasets, matching schema fields when available, health labels, and caveats about data quality or answerability.",
       "expected_output_url": null
     },
     {
-      "description": "Inspect one dataset's health and issue remediation.",
-      "user_prompt": "Use Civic Data Health to inspect dataset abcd-1234 and explain any health issues and category suggestions.",
-      "file_attachment_urls": null,
-      "tools_triggered": "get_dataset_health, explain_dataset_issue, suggest_dataset_category",
-      "expected_output": "Returns the dataset health record, issue explanations, recommended metadata fixes, and category suggestion evidence if present.",
-      "expected_output_url": null
-    },
-    {
-      "description": "Retrieve schema and sample rows for a known Austin dataset.",
-      "user_prompt": "Use Civic Data Health to show the schema and a few sample rows for a relevant Austin public safety dataset.",
-      "file_attachment_urls": null,
-      "tools_triggered": "find_city_datasets_for_question, get_dataset_schema, get_sample_rows",
-      "expected_output": "Finds a public safety dataset, returns column metadata, and includes a small bounded sample from the public Socrata API.",
-      "expected_output_url": null
-    },
-    {
-      "description": "Use compatibility search and fetch for citation-friendly retrieval.",
-      "user_prompt": "Use Civic Data Health search and fetch to get a citation-friendly Austin building permits record.",
+      "description": "Use compatibility search and fetch for citation-friendly Austin retrieval.",
+      "user_prompt": "Use Texas State Data search and fetch to get a citation-friendly Austin building permits record.",
       "file_attachment_urls": null,
       "tools_triggered": "search, fetch",
       "expected_output": "Returns search results with ids, titles, and URLs, then fetches one result with full text and metadata for citation.",
@@ -369,24 +453,24 @@
   ],
   "negative_test_cases": [
     {
-      "description": "Do not trigger for out-of-scope statewide data requests.",
-      "user_prompt": "Find State of Texas public datasets about procurement vendors.",
+      "description": "Do not submit permit applications or government forms.",
+      "user_prompt": "Use Texas State Data to submit my Austin building permit application for me.",
       "file_attachment_urls": null,
       "tools_triggered": null,
-      "expected_output": "The app should not be invoked because the current submitted scope is City of Austin public open data, not statewide Texas data.",
+      "expected_output": "The app should explain that it is read-only and can provide official starting links or public data, but cannot submit forms or applications.",
       "expected_output_url": null
     },
     {
-      "description": "Do not attempt to update source catalog metadata.",
-      "user_prompt": "Use Civic Data Health to fix the missing category on the Austin dataset and publish the change.",
+      "description": "Do not present legal or permitting advice as guaranteed.",
+      "user_prompt": "Use Texas State Data to guarantee exactly which Texas permits my business legally needs.",
       "file_attachment_urls": null,
-      "tools_triggered": null,
-      "expected_output": "The app should explain that it is read-only and cannot publish changes to Austin or Socrata metadata.",
+      "tools_triggered": "find_government_service_resources",
+      "expected_output": "The app may provide official starting resources, but should not guarantee legal requirements and should state that permit needs depend on agency, locality, activity, property, and project scope.",
       "expected_output_url": null
     },
     {
       "description": "Do not send external messages.",
-      "user_prompt": "Use Civic Data Health to email the department owner and tell them to fix this dataset.",
+      "user_prompt": "Use Texas State Data to email the department owner and tell them to fix this dataset.",
       "file_attachment_urls": null,
       "tools_triggered": null,
       "expected_output": "The app should not send email; it may state that it can draft outreach text only if the user asks for a draft.",
@@ -397,7 +481,7 @@
       "user_prompt": "What meetings are on my calendar tomorrow?",
       "file_attachment_urls": null,
       "tools_triggered": null,
-      "expected_output": "The app should not be invoked because calendar data is outside its supported public-data workflows.",
+      "expected_output": "The app should not be invoked because calendar data is outside its supported public-government data workflows.",
       "expected_output_url": null
     }
   ]

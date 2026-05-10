@@ -180,6 +180,25 @@ Supporting tools:
 
 Set `SOCRATA_APP_TOKEN` in the service environment if public traffic grows; unauthenticated Socrata calls can be throttled.
 
+## Texas and Austin Government Data
+
+The MCP also exposes a public-government helper for people who want to find useful Texas or Austin government data and official starting points for permits, licenses, services, and governance questions.
+
+Main tools:
+
+- `ask_texas_government_question`: searches official Texas/Austin service resources and public open-data catalogs, then includes bounded public rows from matching queryable Socrata datasets when useful.
+- `search_public_data_catalogs`: searches `https://data.texas.gov/data.json` and `https://data.austintexas.gov/data.json`.
+- `find_government_service_resources`: returns official starting links for permit, license, business, and government-service questions.
+- `query_public_dataset_rows`: fetches bounded read-only rows from a known State of Texas or Austin Socrata dataset.
+
+Example:
+
+```text
+How do I start a food business permit process in Texas and Austin, and what public datasets can help me research it?
+```
+
+The tool returns official Texas and Austin starting links, matching open-data records, bounded row samples when a dataset is queryable, and caveats that permit requirements depend on the agency, locality, business activity, property, and project scope.
+
 ## Schema Knowledge
 
 MCP tools can inspect Socrata schemas on demand and cache them in SQLite:

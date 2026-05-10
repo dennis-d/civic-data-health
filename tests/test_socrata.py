@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from civic_data_health.socrata import simplify_schema, validate_dataset_id, validate_field_name
+from civic_data_health.socrata import simplify_schema, validate_dataset_id, validate_field_name, validate_socrata_domain
 
 
 class SocrataTests(unittest.TestCase):
@@ -15,6 +15,11 @@ class SocrataTests(unittest.TestCase):
         self.assertEqual(validate_field_name("issue_date"), "issue_date")
         with self.assertRaises(ValueError):
             validate_field_name("issue_date;drop")
+
+    def test_validate_socrata_domain(self):
+        self.assertEqual(validate_socrata_domain("data.texas.gov"), "data.texas.gov")
+        with self.assertRaises(ValueError):
+            validate_socrata_domain("example.com")
 
     def test_simplify_schema_keeps_queryable_columns(self):
         schema = simplify_schema(
