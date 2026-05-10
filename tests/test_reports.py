@@ -3,16 +3,19 @@ from __future__ import annotations
 import unittest
 
 from civic_data_health.reports import (
+    DEMO_RECORDING_URL,
     PRIVACY_URL,
     PUBLIC_MCP_URL,
     SUPPORT_EMAIL,
     SUPPORT_URL,
+    TERMS_URL,
     find_asset,
     render_detail_page,
     render_help_page,
     render_privacy_page,
     render_submission_page,
     render_support_page,
+    render_terms_page,
 )
 
 
@@ -37,6 +40,7 @@ class ReportRenderTests(unittest.TestCase):
         self.assertIn("Independently operated", html)
         self.assertIn(PRIVACY_URL, html)
         self.assertIn(SUPPORT_URL, html)
+        self.assertIn(TERMS_URL, html)
 
     def test_privacy_page_contains_review_required_disclosures(self):
         html = render_privacy_page({"run_id": 7, "fetched_at": "2026-05-09T11:09:51Z"})
@@ -57,6 +61,18 @@ class ReportRenderTests(unittest.TestCase):
         self.assertIn("cannot submit applications", html)
         self.assertIn(PUBLIC_MCP_URL, html)
         self.assertIn(PRIVACY_URL, html)
+        self.assertIn(TERMS_URL, html)
+
+    def test_terms_page_contains_review_required_limits(self):
+        html = render_terms_page({"run_id": 7, "fetched_at": "2026-05-09T11:09:51Z"})
+
+        self.assertIn("Terms of Service", html)
+        self.assertIn("free to use", html)
+        self.assertIn("does not require a separate account or authentication", html)
+        self.assertIn("not affiliated with, sponsored by, or endorsed by", html)
+        self.assertIn("does not provide legal advice", html)
+        self.assertIn("cannot submit applications", html)
+        self.assertIn(SUPPORT_EMAIL, html)
 
     def test_submission_page_contains_dashboard_fields(self):
         html = render_submission_page({"run_id": 7, "fetched_at": "2026-05-09T11:09:51Z"})
@@ -67,6 +83,8 @@ class ReportRenderTests(unittest.TestCase):
         self.assertIn(PUBLIC_MCP_URL, html)
         self.assertIn(PRIVACY_URL, html)
         self.assertIn(SUPPORT_URL, html)
+        self.assertIn(TERMS_URL, html)
+        self.assertIn(DEMO_RECORDING_URL, html)
         self.assertIn("OpenAI organization identity verification", html)
 
     def test_detail_page_surfaces_tags_when_category_is_missing(self):

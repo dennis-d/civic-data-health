@@ -18,7 +18,9 @@ PUBLIC_SITE_URL = "https://civic.pagonya.co"
 PUBLIC_MCP_URL = PUBLIC_SITE_URL + "/mcp"
 PRIVACY_URL = PUBLIC_SITE_URL + "/privacy.html"
 SUPPORT_URL = PUBLIC_SITE_URL + "/support.html"
+TERMS_URL = PUBLIC_SITE_URL + "/terms.html"
 SUBMISSION_URL = PUBLIC_SITE_URL + "/submission.html"
+DEMO_RECORDING_URL = PUBLIC_SITE_URL + "/demo/demo-recording.mp4"
 OPENAI_CONNECT_DOC_URL = "https://developers.openai.com/apps-sdk/deploy/connect-chatgpt"
 OPENAI_SUBMISSION_DOC_URL = "https://developers.openai.com/apps-sdk/deploy/submission"
 OPENAI_GUIDELINES_DOC_URL = "https://developers.openai.com/apps-sdk/app-submission-guidelines"
@@ -45,6 +47,7 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
     help_path = out_dir / "help.html"
     privacy_path = out_dir / "privacy.html"
     support_path = out_dir / "support.html"
+    terms_path = out_dir / "terms.html"
     submission_path = out_dir / "submission.html"
     icon_source = find_asset("texas-civic-data-health-icon.png")
     icon_path = out_dir / "assets" / "texas-civic-data-health-icon.png"
@@ -69,6 +72,7 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
     help_path.write_text(render_help_page(summary), encoding="utf-8")
     privacy_path.write_text(render_privacy_page(summary), encoding="utf-8")
     support_path.write_text(render_support_page(summary), encoding="utf-8")
+    terms_path.write_text(render_terms_page(summary), encoding="utf-8")
     submission_path.write_text(render_submission_page(summary), encoding="utf-8")
     if icon_source is not None:
         icon_path.parent.mkdir(parents=True, exist_ok=True)
@@ -83,6 +87,7 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
         "help": str(help_path),
         "privacy": str(privacy_path),
         "support": str(support_path),
+        "terms": str(terms_path),
         "submission": str(submission_path),
         "details": str(detail_dir),
     }
@@ -243,6 +248,7 @@ def render_html(summary: Dict[str, Any], rows, skipped) -> str:
         <a href="help.html">Connect to ChatGPT</a>
         <a href="privacy.html">Privacy</a>
         <a href="support.html">Support</a>
+        <a href="terms.html">Terms</a>
       </div>
       <nav class="tabs" aria-label="Report sections">
         <a href="#active_dataset">Active datasets</a>
@@ -586,7 +592,7 @@ def render_methodology_page(summary: Dict[str, Any]) -> str:
 </head>
 <body>
   <main>
-    <p><a href="index.html">Back to report</a> | <a href="help.html">Connect to ChatGPT</a> | <a href="privacy.html">Privacy</a> | <a href="support.html">Support</a></p>
+    <p><a href="index.html">Back to report</a> | <a href="help.html">Connect to ChatGPT</a> | <a href="privacy.html">Privacy</a> | <a href="support.html">Support</a> | <a href="terms.html">Terms</a></p>
     <h1>Methodology</h1>
     <div class="panel">
       <h2>Classification First</h2>
@@ -664,7 +670,7 @@ def render_help_page(summary: Dict[str, Any]) -> str:
 <body>
   <header>
     <main>
-      <p><a href="index.html">Back to report</a> | <a href="methodology.html">Methodology</a> | <a href="privacy.html">Privacy</a> | <a href="support.html">Support</a></p>
+      <p><a href="index.html">Back to report</a> | <a href="methodology.html">Methodology</a> | <a href="privacy.html">Privacy</a> | <a href="support.html">Support</a> | <a href="terms.html">Terms</a></p>
       <h1>Connect Public Texas State and Austin City Search to ChatGPT</h1>
       <p>This page is for a live demo. The MCP server is public, HTTPS, and read-only. Its primary feature is Texas and Austin public-data search; Austin dataset-quality checks are secondary context.</p>
     </main>
@@ -724,7 +730,7 @@ curl -sS -X POST {mcp_url} \\
       <h2>After Changes</h2>
       <p>When tools, descriptions, or schemas change, redeploy this server and refresh the connector metadata in ChatGPT under <strong>Settings -&gt; Connectors</strong>.</p>
       <p>Official setup reference: <a href="{docs_url}">OpenAI Apps SDK - Connect from ChatGPT</a>.</p>
-      <p>Public review links: <a href="{privacy_url}">Privacy policy</a>, <a href="{support_url}">Support</a>, and <a href="{submission_url}">submission checklist</a>.</p>
+      <p>Public review links: <a href="{privacy_url}">Privacy policy</a>, <a href="{support_url}">Support</a>, <a href="{terms_url}">Terms of Service</a>, and <a href="{submission_url}">submission checklist</a>.</p>
       <p class="muted">Run {run_id}, fetched {fetched_at}. {footer}</p>
     </div>
   </main>
@@ -736,6 +742,7 @@ curl -sS -X POST {mcp_url} \\
         docs_url=escape(OPENAI_CONNECT_DOC_URL),
         privacy_url=escape(PRIVACY_URL),
         support_url=escape(SUPPORT_URL),
+        terms_url=escape(TERMS_URL),
         submission_url=escape(SUBMISSION_URL),
         run_id=summary["run_id"],
         fetched_at=escape(summary["fetched_at"]),
@@ -827,6 +834,7 @@ def render_support_page(summary: Dict[str, Any]) -> str:
         <li>MCP endpoint: <code>{mcp_url}</code></li>
         <li>Health endpoint: <a href="{health_url}">{health_url}</a></li>
         <li>Privacy policy: <a href="{privacy_url}">{privacy_url}</a></li>
+        <li>Terms of Service: <a href="{terms_url}">{terms_url}</a></li>
       </ul>
     </div>
     <div class="panel">
@@ -844,6 +852,54 @@ def render_support_page(summary: Dict[str, Any]) -> str:
             mcp_url=escape(PUBLIC_MCP_URL),
             health_url=escape(PUBLIC_MCP_URL + "/health"),
             privacy_url=escape(PRIVACY_URL),
+            terms_url=escape(TERMS_URL),
+            run_id=summary["run_id"],
+            fetched_at=escape(summary["fetched_at"]),
+            footer=escape(FOOTER),
+        ),
+    )
+
+
+def render_terms_page(summary: Dict[str, Any]) -> str:
+    return render_static_page(
+        title="Terms of Service - Public Texas State and Austin City Search",
+        heading="Terms of Service",
+        intro=(
+            "Terms for using Public Texas State and Austin City Search, a free read-only ChatGPT app and MCP server "
+            "for public State of Texas and City of Austin data."
+        ),
+        body="""
+    <div class="panel">
+      <h2>Use of the App</h2>
+      <p>The app is free to use and does not require a separate account or authentication. It provides read-only search, lookup, and public-data retrieval tools for State of Texas and City of Austin public information.</p>
+    </div>
+    <div class="panel">
+      <h2>Public Information Only</h2>
+      <p>The app uses public government catalogs, public Socrata APIs, and official public government web pages. Do not submit sensitive personal data, payment data, passwords, API keys, medical information, or confidential records.</p>
+    </div>
+    <div class="panel">
+      <h2>No Government Affiliation</h2>
+      <p>This app is independently operated by Pagonya LLC. It is not affiliated with, sponsored by, or endorsed by the State of Texas, the City of Austin, or any government agency.</p>
+    </div>
+    <div class="panel">
+      <h2>No Legal or Permitting Guarantee</h2>
+      <p>The app may provide official starting links, public datasets, and research context. It does not provide legal advice and cannot guarantee which permits, licenses, approvals, or deadlines apply to a specific person, property, project, or business.</p>
+    </div>
+    <div class="panel">
+      <h2>Read-Only Limits</h2>
+      <p>The app cannot submit applications, file complaints, send email, make payments, update public records, or modify government systems. Users remain responsible for verifying requirements with the relevant official agency.</p>
+    </div>
+    <div class="panel">
+      <h2>Availability and Accuracy</h2>
+      <p>Public data may be incomplete, delayed, changed, or unavailable. The app is provided as-is for public-information research, with no warranty that results are complete, current, or error-free.</p>
+    </div>
+    <div class="panel">
+      <h2>Contact</h2>
+      <p>Email <a href="mailto:{support_email}">{support_email}</a> for support or terms questions.</p>
+      <p class="muted">Last updated May 10, 2026. Run {run_id}, fetched {fetched_at}. {footer}</p>
+    </div>
+""".format(
+            support_email=escape(SUPPORT_EMAIL),
             run_id=summary["run_id"],
             fetched_at=escape(summary["fetched_at"]),
             footer=escape(FOOTER),
@@ -867,6 +923,8 @@ def render_submission_page(summary: Dict[str, Any]) -> str:
         <dt>Website URL</dt><dd><a href="{site_url}">{site_url}</a></dd>
         <dt>Privacy policy URL</dt><dd><a href="{privacy_url}">{privacy_url}</a></dd>
         <dt>Support URL</dt><dd><a href="{support_url}">{support_url}</a></dd>
+        <dt>Terms of Service URL</dt><dd><a href="{terms_url}">{terms_url}</a></dd>
+        <dt>Demo Recording URL</dt><dd><a href="{demo_recording_url}">{demo_recording_url}</a></dd>
       </dl>
     </div>
     <div class="panel">
@@ -907,6 +965,8 @@ def render_submission_page(summary: Dict[str, Any]) -> str:
             site_url=escape(PUBLIC_SITE_URL),
             privacy_url=escape(PRIVACY_URL),
             support_url=escape(SUPPORT_URL),
+            terms_url=escape(TERMS_URL),
+            demo_recording_url=escape(DEMO_RECORDING_URL),
             submission_doc_url=escape(OPENAI_SUBMISSION_DOC_URL),
             guidelines_doc_url=escape(OPENAI_GUIDELINES_DOC_URL),
             run_id=summary["run_id"],
@@ -943,7 +1003,7 @@ def render_static_page(*, title: str, heading: str, intro: str, body: str) -> st
 <body>
   <header>
     <main>
-      <p><a href="index.html">Back to report</a> | <a href="help.html">Connect to ChatGPT</a> | <a href="privacy.html">Privacy</a> | <a href="support.html">Support</a></p>
+      <p><a href="index.html">Back to report</a> | <a href="help.html">Connect to ChatGPT</a> | <a href="privacy.html">Privacy</a> | <a href="support.html">Support</a> | <a href="terms.html">Terms</a></p>
       <h1>{heading}</h1>
       <p>{intro}</p>
     </main>

@@ -11,6 +11,8 @@ Use this as the dashboard checklist for publishing Public Texas State and Austin
 - Website URL: https://civic.pagonya.co/
 - Privacy policy URL: https://civic.pagonya.co/privacy.html
 - Support URL: https://civic.pagonya.co/support.html
+- Terms of Service URL: https://civic.pagonya.co/terms.html
+- Demo Recording URL: https://civic.pagonya.co/demo/demo-recording.mp4
 - Icon: `assets/texas-civic-data-health-icon.png`
 - Submission JSON: `chatgpt-app-submission.json`
 
@@ -24,7 +26,7 @@ Public Texas State and Austin City Search helps users search State of Texas and 
 - The app is free to use and unauthenticated for review.
 - All MCP tools are read-only, non-destructive, and do not change public internet state.
 - The app cannot submit permit applications, file 3-1-1 requests, send email, update public records, or guarantee legal permit requirements.
-- The static site publishes the privacy policy, support page, and this review checklist.
+- The static site publishes the privacy policy, terms page, support page, and this review checklist.
 
 ## Manual Gates
 
