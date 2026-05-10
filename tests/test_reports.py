@@ -7,6 +7,7 @@ from civic_data_health.reports import (
     PUBLIC_MCP_URL,
     SUPPORT_EMAIL,
     SUPPORT_URL,
+    find_asset,
     render_detail_page,
     render_help_page,
     render_privacy_page,
@@ -16,6 +17,12 @@ from civic_data_health.reports import (
 
 
 class ReportRenderTests(unittest.TestCase):
+    def test_submission_icon_asset_is_available_from_repo_root(self):
+        asset = find_asset("texas-civic-data-health-icon.png")
+
+        self.assertIsNotNone(asset)
+        self.assertTrue(asset.exists())
+
     def test_help_page_contains_chatgpt_demo_connection_details(self):
         html = render_help_page({"run_id": 7, "fetched_at": "2026-05-09T11:09:51Z"})
 

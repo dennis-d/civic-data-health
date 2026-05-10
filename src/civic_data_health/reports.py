@@ -46,7 +46,7 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
     privacy_path = out_dir / "privacy.html"
     support_path = out_dir / "support.html"
     submission_path = out_dir / "submission.html"
-    icon_source = Path(__file__).resolve().parents[2] / "assets" / "texas-civic-data-health-icon.png"
+    icon_source = find_asset("texas-civic-data-health-icon.png")
     icon_path = out_dir / "assets" / "texas-civic-data-health-icon.png"
     detail_dir = out_dir / "datasets"
     group_summary = summarize_asset_groups(rows)
@@ -70,7 +70,7 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
     privacy_path.write_text(render_privacy_page(summary), encoding="utf-8")
     support_path.write_text(render_support_page(summary), encoding="utf-8")
     submission_path.write_text(render_submission_page(summary), encoding="utf-8")
-    if icon_source.exists():
+    if icon_source is not None:
         icon_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(icon_source, icon_path)
 
@@ -89,6 +89,17 @@ def write_reports(*, db_path: Path, out_dir: Optional[Path], run_id: Optional[in
     if icon_path.exists():
         paths["icon"] = str(icon_path)
     return paths
+
+
+def find_asset(filename: str) -> Optional[Path]:
+    candidates = [
+        Path.cwd() / "assets" / filename,
+        Path(__file__).resolve().parents[2] / "assets" / filename,
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def write_csv(path: Path, rows) -> None:
