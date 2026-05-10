@@ -652,7 +652,7 @@ def render_help_page(summary: Dict[str, Any]) -> str:
       <ol>
         <li>Open ChatGPT web and go to <strong>Settings -&gt; Apps &amp; Connectors -&gt; Advanced settings</strong>.</li>
         <li>Turn on <strong>Developer mode</strong>. If your workspace disables it, an admin needs to allow developer mode first.</li>
-        <li>Go back to <strong>Settings -&gt; Apps &amp; Connectors</strong> and click <strong>Create</strong>.</li>
+        <li>Go to <strong>Settings -&gt; Connectors -&gt; Create</strong>.</li>
         <li>Use <strong>Civic Data Health</strong> as the connector name.</li>
         <li>Use this description: <em>Ask questions about Austin open data, find relevant datasets, inspect dataset health, schemas, sample rows, and data quality issues.</em></li>
         <li>Use <code>{mcp_url}</code> as the connector URL.</li>
@@ -683,7 +683,7 @@ curl -sS -X POST {mcp_url} \\
     </div>
     <div class="panel">
       <h2>After Changes</h2>
-      <p>When tools, descriptions, or schemas change, redeploy this server and refresh the connector metadata in ChatGPT under <strong>Settings -&gt; Apps &amp; Connectors</strong>.</p>
+      <p>When tools, descriptions, or schemas change, redeploy this server and refresh the connector metadata in ChatGPT under <strong>Settings -&gt; Connectors</strong>.</p>
       <p>Official setup reference: <a href="{docs_url}">OpenAI Apps SDK - Connect from ChatGPT</a>.</p>
       <p class="muted">Run {run_id}, fetched {fetched_at}. {footer}</p>
     </div>

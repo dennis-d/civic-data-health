@@ -9,6 +9,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+from typing_extensions import TypedDict
 
 from . import __version__
 from .analysis import (
@@ -29,6 +30,25 @@ from .storage import connect, latest_run_id, report_rows, run_summary
 
 AssetGroupArg = Literal["active_dataset", "needs_manual_review", "archive_snapshot", "event_specific", "measure", "story_reference", "all"]
 LabelArg = Literal["high_risk", "needs_review", "good", "all"]
+
+
+class SearchResult(TypedDict):
+    id: str
+    title: str
+    url: str
+
+
+class SearchOutput(TypedDict):
+    results: List[SearchResult]
+
+
+class FetchOutput(TypedDict):
+    id: str
+    title: str
+    text: str
+    url: str
+    metadata: Dict[str, str]
+
 
 READ_ONLY = ToolAnnotations(
     readOnlyHint=True,
@@ -532,7 +552,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
         annotations=READ_ONLY,
         structured_output=True,
     )
-    def search(query: str) -> Dict[str, Any]:
+    def search(query: str) -> SearchOutput:
         rows = search_report(db_path, query, 10)
         return {
             "results": [
@@ -552,7 +572,7 @@ def create_mcp(db_path: Path, host: str, port: int) -> FastMCP:
         annotations=READ_ONLY,
         structured_output=True,
     )
-    def fetch(id: str) -> Dict[str, Any]:
+    def fetch(id: str) -> FetchOutput:
         normalized_id = id.strip().lower()
         if not normalized_id:
             raise ValueError("id is required")

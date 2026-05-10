@@ -1,0 +1,404 @@
+{
+  "$schema": "https://developers.openai.com/apps-sdk/schemas/chatgpt-app-submission.v1.json",
+  "schema_version": 1,
+  "app_info": {
+    "display_name": "Civic Data Health",
+    "subtitle": "Audit Austin open data",
+    "description": "Civic Data Health helps users find City of Austin open datasets, inspect metadata health, compare quality risks, review schemas and sample rows, and answer conservative row-count questions against public Socrata data. The app is read-only and uses public Austin open-data catalog and dataset APIs.",
+    "category": "PRODUCTIVITY"
+  },
+  "tools": {
+    "get_report_summary": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Retrieves the latest report summary and computed risk groups without modifying data.",
+        "open_world_justification": "Only reads local report data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "list_high_risk_datasets": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Lists high-risk public dataset records from the latest report without changing them.",
+        "open_world_justification": "Only reads local report data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "get_top_actionable_fixes": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Computes metadata cleanup recommendations from existing report rows without applying changes.",
+        "open_world_justification": "Only reads local report data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "compare_asset_types": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Summarizes report asset groups without creating or updating records.",
+        "open_world_justification": "Only reads local report data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "list_classification_review_candidates": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Lists records needing human classification review without changing classifications.",
+        "open_world_justification": "Only reads local report data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "get_classification_methodology": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Returns static methodology text and links without changing any system.",
+        "open_world_justification": "Only reads packaged methodology data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "list_datasets_by_asset_group": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Filters report rows by asset group and label without modifying data.",
+        "open_world_justification": "Only reads local report data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "get_dataset_health": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Retrieves one public dataset health record from the latest report without changing it.",
+        "open_world_justification": "Only reads local report data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "suggest_dataset_category": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Returns a stored category suggestion and evidence without writing it to the source catalog.",
+        "open_world_justification": "Only reads local report data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "list_missing_category_suggestions": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Lists records with stored category suggestions without updating Austin metadata.",
+        "open_world_justification": "Only reads local report data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "explain_dataset_issue": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Explains existing issue codes and recommended actions without applying fixes.",
+        "open_world_justification": "Only reads local report data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "draft_department_email": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Generates draft text only and does not send, save, or queue an email.",
+        "open_world_justification": "Only returns draft text inside ChatGPT and cannot contact external recipients.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "search_datasets": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Searches public report rows without changing the report or source data.",
+        "open_world_justification": "Only reads local report data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "ask_city_data_question": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Answers Austin data questions from report rows and read-only public Socrata queries.",
+        "open_world_justification": "Only reads public Austin and Socrata data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "find_city_datasets_for_question": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Ranks public Austin datasets for a question without changing the catalog.",
+        "open_world_justification": "Only reads local report data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "get_dataset_capabilities": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads cached or public schema metadata to summarize dataset capabilities.",
+        "open_world_justification": "Only reads public Austin and Socrata data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "search_dataset_columns": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Searches cached or public schema metadata without modifying source datasets.",
+        "open_world_justification": "Only reads public Austin and Socrata data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "find_answerable_datasets": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Ranks datasets by answerability from report and schema metadata without changing data.",
+        "open_world_justification": "Only reads public Austin and Socrata data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "search_city_knowledge": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Combines catalog and schema search over public data without modifying records.",
+        "open_world_justification": "Only reads public Austin and Socrata data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "fetch_city_knowledge": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Retrieves one dataset's report, classification, and schema details without changing data.",
+        "open_world_justification": "Only reads public Austin and Socrata data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "get_dataset_schema": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Retrieves cached or public Socrata column metadata for a dataset.",
+        "open_world_justification": "Only reads public Austin and Socrata data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "get_sample_rows": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Retrieves a bounded sample of public Socrata rows without changing the dataset.",
+        "open_world_justification": "Only reads public Austin and Socrata data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "query_dataset_count": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Runs a read-only aggregate count against one public Socrata dataset.",
+        "open_world_justification": "Only reads public Austin and Socrata data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "search": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Returns citation-friendly search results from the public report without modifying data.",
+        "open_world_justification": "Only reads local report data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    },
+    "fetch": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Retrieves citation-friendly text for one public report record without modifying data.",
+        "open_world_justification": "Only reads local report data and returns results inside ChatGPT.",
+        "destructive_justification": "Does not delete, overwrite, send messages, or perform irreversible actions."
+      }
+    }
+  },
+  "test_cases": [
+    {
+      "description": "Find the best Austin datasets for a civic data question.",
+      "user_prompt": "Use Civic Data Health to find Austin datasets about building permits and explain which one is best for permit volume questions.",
+      "file_attachment_urls": null,
+      "tools_triggered": "ask_city_data_question",
+      "expected_output": "Returns ranked Austin building permit datasets with source links, quality caveats, and a recommendation for permit volume analysis.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Answer a conservative row-count question from public Socrata data.",
+      "user_prompt": "Using Civic Data Health, how many building permits were issued in Austin in 2025?",
+      "file_attachment_urls": null,
+      "tools_triggered": "ask_city_data_question",
+      "expected_output": "Identifies the relevant dataset, applies a validated date field when available, returns a count, source URL, and caveats.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Review the highest-impact metadata cleanup opportunities.",
+      "user_prompt": "Use Civic Data Health to show the top actionable metadata fixes for active Austin datasets.",
+      "file_attachment_urls": null,
+      "tools_triggered": "get_top_actionable_fixes",
+      "expected_output": "Lists active datasets with issue codes, remediation guidance, scores, labels, and public source links.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Search catalog and schema knowledge together.",
+      "user_prompt": "Use Civic Data Health to find Austin homelessness service datasets and include schema or field caveats when available.",
+      "file_attachment_urls": null,
+      "tools_triggered": "search_city_knowledge, fetch_city_knowledge",
+      "expected_output": "Returns relevant datasets, matching schema fields when available, health labels, and caveats about data quality or answerability.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Inspect one dataset's health and issue remediation.",
+      "user_prompt": "Use Civic Data Health to inspect dataset abcd-1234 and explain any health issues and category suggestions.",
+      "file_attachment_urls": null,
+      "tools_triggered": "get_dataset_health, explain_dataset_issue, suggest_dataset_category",
+      "expected_output": "Returns the dataset health record, issue explanations, recommended metadata fixes, and category suggestion evidence if present.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Retrieve schema and sample rows for a known Austin dataset.",
+      "user_prompt": "Use Civic Data Health to show the schema and a few sample rows for a relevant Austin public safety dataset.",
+      "file_attachment_urls": null,
+      "tools_triggered": "find_city_datasets_for_question, get_dataset_schema, get_sample_rows",
+      "expected_output": "Finds a public safety dataset, returns column metadata, and includes a small bounded sample from the public Socrata API.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Use compatibility search and fetch for citation-friendly retrieval.",
+      "user_prompt": "Use Civic Data Health search and fetch to get a citation-friendly Austin building permits record.",
+      "file_attachment_urls": null,
+      "tools_triggered": "search, fetch",
+      "expected_output": "Returns search results with ids, titles, and URLs, then fetches one result with full text and metadata for citation.",
+      "expected_output_url": null
+    }
+  ],
+  "negative_test_cases": [
+    {
+      "description": "Do not trigger for out-of-scope statewide data requests.",
+      "user_prompt": "Find State of Texas public datasets about procurement vendors.",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "The app should not be invoked because the current submitted scope is City of Austin public open data, not statewide Texas data.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Do not attempt to update source catalog metadata.",
+      "user_prompt": "Use Civic Data Health to fix the missing category on the Austin dataset and publish the change.",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "The app should explain that it is read-only and cannot publish changes to Austin or Socrata metadata.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Do not send external messages.",
+      "user_prompt": "Use Civic Data Health to email the department owner and tell them to fix this dataset.",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "The app should not send email; it may state that it can draft outreach text only if the user asks for a draft.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Do not trigger for unrelated personal productivity requests.",
+      "user_prompt": "What meetings are on my calendar tomorrow?",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "The app should not be invoked because calendar data is outside its supported public-data workflows.",
+      "expected_output_url": null
+    }
+  ]
+}

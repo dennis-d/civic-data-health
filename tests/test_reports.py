@@ -12,6 +12,7 @@ class ReportRenderTests(unittest.TestCase):
         self.assertIn("Connect Civic Data Health to ChatGPT", html)
         self.assertIn(PUBLIC_MCP_URL, html)
         self.assertIn("Settings -&gt; Apps &amp; Connectors", html)
+        self.assertIn("Settings -&gt; Connectors -&gt; Create", html)
         self.assertIn("accept: application/json, text/event-stream", html)
         self.assertIn("https://developers.openai.com/apps-sdk/deploy/connect-chatgpt", html)
         self.assertIn("Pagonya LLC", html)
