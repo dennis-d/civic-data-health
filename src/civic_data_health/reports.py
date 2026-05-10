@@ -871,7 +871,7 @@ def render_submission_page(summary: Dict[str, Any]) -> str:
     </div>
     <div class="panel">
       <h2>Review Summary</h2>
-      <p>Public Texas State and Austin City Search helps users search State of Texas and City of Austin public datasets, find official permit/license/service starting points, and fetch bounded read-only rows from public Socrata datasets. Austin dataset-health checks are secondary context for quality caveats. The app is independently operated and is not affiliated with or endorsed by the State of Texas or City of Austin.</p>
+      <p>Public Texas State and Austin City Search helps users search State of Texas and City of Austin public datasets, find official permit/license/service starting points, and fetch bounded read-only rows from public Socrata datasets. Austin dataset-health checks are secondary context for quality caveats. The app is free to use without authentication, independently operated, and is not affiliated with or endorsed by the State of Texas or City of Austin.</p>
       <p>The MCP server is read-only, public HTTPS, unauthenticated for review, and exposes explicit read-only, non-destructive, non-open-world annotations on all tools.</p>
     </div>
     <div class="panel">

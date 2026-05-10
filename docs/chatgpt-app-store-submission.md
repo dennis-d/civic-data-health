@@ -16,12 +16,12 @@ Use this as the dashboard checklist for publishing Public Texas State and Austin
 
 ## Short Description
 
-Public Texas State and Austin City Search helps users search State of Texas and City of Austin public datasets, find official permit/license/service starting points, and fetch bounded read-only rows from public Socrata datasets. Austin dataset-health checks are secondary context for quality caveats. The app is independently operated and is not affiliated with or endorsed by the State of Texas or City of Austin.
+Public Texas State and Austin City Search helps users search State of Texas and City of Austin public datasets, find official permit/license/service starting points, and fetch bounded read-only rows from public Socrata datasets. Austin dataset-health checks are secondary context for quality caveats. The app is free to use without authentication, independently operated, and is not affiliated with or endorsed by the State of Texas or City of Austin.
 
 ## Review Notes
 
 - Public HTTPS MCP endpoint is available at `https://civic.pagonya.co/mcp`.
-- The app is unauthenticated for review.
+- The app is free to use and unauthenticated for review.
 - All MCP tools are read-only, non-destructive, and do not change public internet state.
 - The app cannot submit permit applications, file 3-1-1 requests, send email, update public records, or guarantee legal permit requirements.
 - The static site publishes the privacy policy, support page, and this review checklist.
