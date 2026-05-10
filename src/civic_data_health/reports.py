@@ -12,7 +12,7 @@ from .analysis import asset_group, asset_group_label, summarize_asset_groups, to
 from .category_suggestions import rows_with_category_suggestions
 from .storage import connect, latest_run_id, report_rows, run_summary, skipped_rows
 
-FOOTER = "Prepared by Pagonya LLC using public State of Texas and City of Austin open data. Not affiliated with or endorsed by the State of Texas or City of Austin."
+FOOTER = "Uses public State of Texas and City of Austin open data. Independently operated; not affiliated with or endorsed by the State of Texas or City of Austin."
 SECTION_ORDER = ("active_dataset", "needs_manual_review", "archive_snapshot", "event_specific", "measure", "story_reference")
 PUBLIC_SITE_URL = "https://civic.pagonya.co"
 PUBLIC_MCP_URL = PUBLIC_SITE_URL + "/mcp"

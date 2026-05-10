@@ -34,7 +34,7 @@ class ReportRenderTests(unittest.TestCase):
         self.assertIn("Austin dataset-quality checks are secondary context", html)
         self.assertIn("accept: application/json, text/event-stream", html)
         self.assertIn("https://developers.openai.com/apps-sdk/deploy/connect-chatgpt", html)
-        self.assertIn("Pagonya LLC", html)
+        self.assertIn("Independently operated", html)
         self.assertIn(PRIVACY_URL, html)
         self.assertIn(SUPPORT_URL, html)
 
